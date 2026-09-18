@@ -1,64 +1,75 @@
-# 吳 · 泡泡取名機 (wubaobao)
+# 吳 · 泡泡取名機
 
-給寶寶取名字的 3D 互動小遊戲（three.js / GitHub Pages）。
-姓固定 **吳**，名 1～2 個字。**嬰兒隨便摸、隨便滑，都會莫名取出一堆好名字。**
+給寶寶玩的繁體中文 3D 取名遊戲。姓固定「吳」，名字一至二字。
 
-線上玩：<https://alastorid.github.io/wubaobao/>
+[線上玩](https://alastorid.github.io/wubaobao/)
 
-## 玩法（邏輯簡單，一眼看懂）
+摸一下、滑一下，泡泡帶來好字與能量。能量滿了就揭曉名字，自動存進名字簿。
+點中／掃過泡泡會收集字，取名時優先採用；指定喜用神時以該五行優先。
+揭曉的 4.6 秒內也能繼續累積、繼續取名，鍵盤輸入同樣有效。
 
-像「倉鼠買股票」一樣，**任何輸入都會有結果，操作一看就懂**：
+- 翡翠綠與暖金介面、水嫩高光泡泡、美字金邊、呼吸水晶、星塵、彩紙迸發。
+- WebAudio 合成點擊、破泡、能量音階、揭曉小號角／叮咚與五行慶祝音；低音量氛圍樂。
+- 首次主動互動才開啟音訊，音效／音樂獨立開關並記住設定。
+- 全螢幕切換；不支援的瀏覽器顯示 Safari「加入主畫面」提示。
+- 480 個不重複繁體字：金 83、木 104、水 101、火 95、土 97。
+- 名字簿支援檢視、單筆刪除、清空；保留 `wubaobao-names` 舊資料格式。
+- 無 CDN、無建置步驟、無外部執行期請求；下載整份專案後可在離線本機 HTTP 伺服器遊玩。
 
-1. **摸一下 / 滑一下** → 畫面冒出一團氣泡，能量澆進頂上的「取名能量瓶」。
-2. **點中泡泡、或滑動掃過泡泡** → 收集那個中文字到中間的名字行。
-3. **能量滿了** → 中央水晶迸發，生出一組 **吳 ＋ 一二字** 的名字，連同
-   **五行**（金木水火土）與 **六書**（象形／形聲／會意／指事）標記一起揭曉。
-4. 取下一個名字就自動記進 **名字簿**（本機 localStorage 存起來）。
-
-嬰兒還不會故意瞄準？沒關係——**亂敲亂滑能量照樣累積，一定會取名。**
-這就是「任何輸入都有意義」的核心設計：視覺上讓嬰兒有得玩（泡泡、彩紙、水晶），
-邏輯上保證父母一定拿得到名字。
-
-## 五行 · 喜用神
-
-父母可在上方選「喜用」（金木水火土 或 自動）。選了之後，遊戲會**優先抽出那一個五行
-的字**來取名——也就是華人取名所講的「補八字喜用神」。每個字都會標出五行，父母一眼
-看懂這名字在補哪一行（例如「♟️♟️ 土土」＝補土）。
-
-五行來源：**部首取法**（氵→水、木艹禾竹→木、王玉→金、日火→火、土山石田→土…），
-望文生義、邏輯一致；各姓名學派別略異，本庫採此通行取法並在 `js/namepool.js` 註明。
-
-## 字庫（158 字）
-
-- **六書全備**：象形（山 川 木 林 雲 星…）、形聲（詩 詠 思 慧 浩 涵 琳 瑞…）、
-  會意（安 明 昌 成 文 智 嘉…）、指事（元 中 一 至）。
-- **筆畫少的字**：資料內含繁體筆畫數 `s`。
-- **美字**：`b:1` 標記推薦常用、寓意佳者（抽中機率較高）。
-- **經方字**：另出自 倪海廈《天紀》經方／本草（dashi · hantang 兩庫）之字，
-  如 參、苓、歸、蓮、丹、香、芷…（茯苓、當歸、丹參等藥材裡的好字）。
-
-## 檔案結構
-
-```
-index.html           頁面骨架 + 五行／名字簿／揭曉 UI
-css/style.css        樣式（觸控友善、無捲動）
-js/namepool.js       字庫（六書 + 五行 + 筆畫 + 美字）+ 取名邏輯
-js/game.js           three.js 遊戲主體（泡泡、粒子、輸入、取名）
-js/three.module.js   three.js 模組入口（vendored，0.186）
-js/three.core.js     three.js 核心（vendored）
-```
-
-All assets vendored locally → 離線／iPad / CDN 受限環境也能跑。
-
-## 在地執行
+## 本機執行
 
 ```sh
 python3 -m http.server 8123
 # 開啟 http://localhost:8123/
 ```
 
-## Credits
+## 檔案
 
-- [three.js](https://threejs.org/) (MIT) — 3D 引擎
-- 《說文解字》六書分類參考
-- 五行命名採「部首取五行」通行法
+```
+index.html           頁面骨架與控制項
+css/style.css        響應式介面、安全區與觸控樣式
+js/game.js           3D、遊戲輸入、全螢幕、名字簿
+js/audio.js          WebAudio 合成音效與音樂
+js/namepool.js       字庫與取名邏輯
+js/three.module.js   three.js 模組入口，必須與核心一併保留
+js/three.core.js     three.js 核心
+tests/              可重跑的資料與瀏覽器測試
+```
+
+## 字庫規則
+
+每字含 `c` 繁體字、`p` 拼音、`s` 實寫筆畫、`w` 五行、`b` 美字標記、`cat` 構形。
+本草字另有 `src`，列出對應藥材名稱。經方／本草是來源，並非六書類別；本庫涵蓋
+象形、指事、會意、形聲四種構形，不宣稱涵蓋六書全部類型。
+
+拼音與筆畫核對 Unicode 17.0 Unihan。筆畫使用繁體字的 `kTotalStrokes`，多值採後值，
+不混用康熙部首加筆法；字形標準間仍可能有差異。原有多音字保留適合取名的讀音。
+五行沿用本遊戲的命名分類，擴充以部首與意象分組；不同姓名學派有不同歸屬。
+構形標籤是學習參考，兼具會意與形聲的字可能有不同分析。
+
+來源：[Unicode Unihan 說明](https://www.unicode.org/reports/tr38/)、
+[Unicode 17.0 資料](https://www.unicode.org/Public/17.0.0/ucd/Unihan.zip)、
+[教育部「形聲」解釋](https://dict.revised.moe.edu.tw/dictView.jsp?ID=110679&la=1&powerMode=0)。
+Unicode 資料授權見 `UNICODE-LICENSE.txt`。three.js 保留原有 MIT 授權。
+
+## 驗證
+
+```sh
+nodetests/namepool.cjs
+# Playwright 僅供開發驗證，不是網站執行依賴：
+npm install --prefix /tmp/wubaobao-qa playwright
+node /tmp/wubaobao-qa/node_modules/playwright/cli.js install chromium webkit
+NODE_PATH=/tmp/wubaobao-qa/node_modules nodetests/browser.cjs
+NODE_PATH=/tmp/wubaobao-qa/node_modules ENGINE=webkit nodetests/browser.cjs
+# 上線後同一套測試：
+NODE_PATH=/tmp/wubaobao-qa/node_modules nodetests/browser.cjs https://alastorid.github.io/wubaobao/
+```
+
+`?qa` 僅啟用唯讀狀態快照；測試以真實滑鼠輸入操作。音訊以分析器檢查輸出波形及
+靜音後歸零。測試包含十次點擊、連續揭曉、掃泡收字、五行、音量記憶、舊資料、
+單筆刪除／清空、損壞儲存回復、全螢幕與 fallback、四種尺寸、大量輸入與資源上限。
+
+效能上限：像素比 1.5、高像素比停用反鋸齒、36 泡泡（手機初始 28）、700 粒子、
+100 張 instanced 彩紙、90 星塵、48 音訊聲部；沒有 bloom 或後製。文字貼圖 128px、
+共用幾何與高光，數量受有限字庫限制。尊重減少動態效果設定。
+桌面／模擬尺寸測試不能替代實機 iPad 長跑 60fps 的量測。

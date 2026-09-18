@@ -7,6 +7,9 @@
 //   4. 取下一個名字，就自動記進底下的「名字簿」（存於本機）。
 // 任何輸入都算數：嬰兒亂敲、亂滑，能量照樣累積，一定會取名。
 import * as THREE from './three.module.js';
+import { SoundGarden } from './audio.js';
+const sound = new SoundGarden();
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ─────────────── 基本設定 ─────────────── */
 const WU = '吳';
@@ -14,7 +17,7 @@ const ENERGY_MAX = 100;
 const TAP_ENERGY = 10;        // 每一下
 const SWIPE_ENERGY = 0.18;    // 每移動 1px
 const POP_ENERGY = 4;         // 收集一個字額外 +4
-const BUBBLE_COUNT = 46;
+const BUBBLE_COUNT = innerWidth < 600 ? 28 : 36;
 
 const CAT_LABEL = { xiangxing: '象形', xingsheng: '形聲', huiyi: '會意', zhishi: '指事', jingfang: '經方' };
 
@@ -22,7 +25,7 @@ const CAT_LABEL = { xiangxing: '象形', xingsheng: '形聲', huiyi: '會意', z
 const CHAR_META = new Map();
 for (const [cat, arr] of Object.entries(POOL)) {
   if (cat === 'all' || !Array.isArray(arr)) continue;
-  for (const e of arr) CHAR_META.set(e.c, { ...e, cat, catLabel: CAT_LABEL[cat] || cat });
+  for (const e of arr) CHAR_META.set(e.c, { ...e, cat: e.cat || cat, catLabel: CAT_LABEL[e.cat || cat] || cat });
 }
 
 /* ─────────────── DOM ─────────────── */
@@ -37,12 +40,11 @@ const revealTag = document.getElementById('revealTag');
 const bookToggle = document.getElementById('bookToggle');
 const bookCount = document.getElementById('bookCount');
 const bookEl = document.getElementById('book');
-const bookClear = document.getElementById('bookClear');
 const wxbar = document.getElementById('wxbar');
 
 /* ─────────────── 渲染器 / 場景 / 相機 ─────────────── */
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) <= 1, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 0);
 stage.appendChild(renderer.domElement);
@@ -63,14 +65,14 @@ const charTexCache = new Map();
 function charTexture(ch, color = '#7a2448') {
   if (charTexCache.has(ch)) return charTexCache.get(ch);
   const cv = document.createElement('canvas');
-  cv.width = cv.height = 256;
+  cv.width = cv.height = 128;
   const g = cv.getContext('2d');
-  g.clearRect(0, 0, 256, 256);
-  g.font = '900 170px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+  g.clearRect(0, 0, 128, 128);
+  g.font = '600 85px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = color;
-  g.fillText(ch, 128, 140);
+  g.fillText(ch, 64, 70);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   charTexCache.set(ch, tex);
@@ -78,7 +80,7 @@ function charTexture(ch, color = '#7a2448') {
 }
 
 /* ─────────────── 粒子系統（點擊／滑動／取名迸發） ─────────────── */
-const MAX_PARTICLES = 1400;
+const MAX_PARTICLES = 700;
 const P = {
   active: 0,
   pos: new Float32Array(MAX_PARTICLES * 3),
@@ -105,7 +107,7 @@ function initParticles() {
   P.geo.setAttribute('color', new THREE.BufferAttribute(P.col, 3));
   P.geo.setDrawRange(0, 0);
   const mat = new THREE.PointsMaterial({
-    size: 0.5, map, vertexColors: true, transparent: true,
+    size: 0.23, map, vertexColors: true, transparent: true,
     opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
   });
   P.mesh = new THREE.Points(P.geo, mat);
@@ -161,13 +163,25 @@ function updateParticles(dt) {
 /* ─────────────── 泡泡 ─────────────── */
 const PASTELS = [0xffb3c9, 0xffd1b8, 0xbfe3ff, 0xc9f2d6, 0xffe08a, 0xe6ccff, 0xffc3d8, 0xb8f0e8];
 const bubbles = [];
-const sphereGeo = new THREE.SphereGeometry(1, 24, 24);
+// 共用高光貼圖與金邊；避免昂貴的環境反射／後製。
+const sheenCanvas = document.createElement('canvas');
+sheenCanvas.width = sheenCanvas.height = 128;
+const sg = sheenCanvas.getContext('2d');
+const gradient = sg.createRadialGradient(64, 64, 40, 64, 64, 63);
+gradient.addColorStop(0, '#ffffff00'); gradient.addColorStop(.8, '#ffffff16'); gradient.addColorStop(1, '#ffffffc0');
+sg.fillStyle = gradient; sg.beginPath(); sg.arc(64, 64, 63, 0, Math.PI * 2); sg.fill();
+sg.strokeStyle = '#ffffffdd'; sg.lineWidth = 5; sg.lineCap = 'round';
+sg.beginPath(); sg.arc(64, 64, 50, 3.7, 4.6); sg.stroke();
+sg.fillStyle = '#fff9'; sg.beginPath(); sg.ellipse(86, 93, 10, 4, -.5, 0, Math.PI * 2); sg.fill();
+const bubbleSheen = new THREE.CanvasTexture(sheenCanvas);
+const rimGeo = new THREE.TorusGeometry(1.025, .015, 4, 36);
+const sphereGeo = new THREE.SphereGeometry(1, 20, 14);
 
 function makeBubble(pos, radius) {
-  const entry = pickChar({ beautyOnly: true }) || pickChar({ beautyOnly: false });
+  const entry = pickChar({ beautyOnly: Math.random() < .65 });
   const mat = new THREE.MeshPhongMaterial({
     color: PASTELS[(Math.random() * PASTELS.length) | 0],
-    shininess: 90, transparent: true, opacity: 0.85
+    shininess: 150, specular: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false
   });
   const mesh = new THREE.Mesh(sphereGeo, mat);
   mesh.scale.setScalar(radius);
@@ -175,8 +189,16 @@ function makeBubble(pos, radius) {
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map: charTexture(entry.c, elColor), transparent: true, depthWrite: false
   }));
-  sprite.scale.setScalar(radius * 1.9);
+  sprite.scale.setScalar(1.12);
+  sprite.position.z = .9;
   mesh.add(sprite);
+  const sheen = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleSheen, transparent: true, depthWrite: false, opacity: .8 }));
+  sheen.scale.setScalar(2.13);
+  sheen.position.z = .12;
+  mesh.add(sheen);
+  const rim = new THREE.Mesh(rimGeo, new THREE.MeshBasicMaterial({ color: 0xd7b56b, transparent: true, opacity: .55, depthWrite: false }));
+  rim.visible = !!entry.b;
+  mesh.add(rim);
   mesh.position.copy(pos);
   scene.add(mesh);
   const b = {
@@ -190,14 +212,15 @@ function makeBubble(pos, radius) {
 }
 
 function respawn(b) {
-  const entry = pickChar({ beautyOnly: true }) || pickChar({ beautyOnly: false });
+  const entry = pickChar({ beautyOnly: Math.random() < .65 });
   b.entry = entry;
   const elColor = (WU_XING[entry.w] || {}).color || '#7a2448';
   b.mesh.children[0].material.map = charTexture(entry.c, elColor);
   b.mesh.children[0].material.needsUpdate = true;
+  b.mesh.children[2].visible = !!entry.b;
   b.mesh.material.color.setHex(PASTELS[(Math.random() * PASTELS.length) | 0]);
   b.mesh.position.set(
-    (Math.random() - 0.5) * 15,
+    bubbleX(),
     -5.5 - Math.random() * 1.4,
     (Math.random() - 0.5) * 4 - 1
   );
@@ -210,6 +233,8 @@ function respawn(b) {
 function popBubble(b) {
   if (!b.alive) return;
   b.alive = false;
+  sound.play('pop');
+  stats.pops++;
   const wpos = new THREE.Vector3();
   b.mesh.getWorldPosition(wpos);
   spawnBurst(wpos, 26, 0xfff4d6, 3.2);
@@ -232,43 +257,49 @@ function updateBubbles(dt, t) {
 
 /* ─────────────── 中央水晶（取名之泉） ─────────────── */
 const crystalMat = new THREE.MeshPhysicalMaterial({
-  color: 0xffb3c9, emissive: 0xff3d7f, emissiveIntensity: 0.55,
-  transparent: true, opacity: 0.85, roughness: 0.16, metalness: 0.1, clearcoat: 1
+  color: 0xb7dfd2, emissive: 0x70b9a0, emissiveIntensity: 0.35, flatShading: true,
+  transparent: true, opacity: 0.85, roughness: 0.2, metalness: 0.25, clearcoat: 1
 });
-const crystal = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), crystalMat);
+const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.25, 0).scale(1, 1.45, 1), crystalMat);
 crystal.position.set(0, 0.2, -2.5);
 crystal.scale.setScalar(1);
 scene.add(crystal);
+const crystalEdges = new THREE.LineSegments(new THREE.EdgesGeometry(crystal.geometry), new THREE.LineBasicMaterial({ color: 0xf9e9b9, transparent: true, opacity: .65 }));
+crystal.add(crystalEdges);
 crystal.userData.base = 1;
 
 /* ─────────────── 遊戲狀態 ─────────────── */
 let energy = 0;
 let target = 'auto';          // 喜用神：auto / 金木水火土
+const stats = { pops: 0, reveals: 0 };
 const caught = [];            // 本輪收集的字
-let isRevealing = false;
 let names = [];               // 名字簿（新→舊）
 let hideTimer = null;
 
 function addEnergy(v) {
-  if (isRevealing) return;
-  energy = Math.min(ENERGY_MAX, energy + v);
+  // 揭曉期間仍累積能量；滿格立即開下一輪，不吞掉小手的輸入。
+  const before = Math.floor(energy / 20);
+  energy += v;
+  if (Math.floor(energy / 20) > before) sound.play('rise', Math.min(energy / ENERGY_MAX, 1));
   crystal.userData.base = 1 + (energy / ENERGY_MAX) * 0.6;
   updateEnergyUI();
-  if (energy >= ENERGY_MAX) generateName();
+  while (energy >= ENERGY_MAX) generateName();
 }
 
 function updateEnergyUI() {
-  const pct = Math.round((energy / ENERGY_MAX) * 100);
+  const pct = Math.min(100, Math.round((energy / ENERGY_MAX) * 100));
   energyFill.style.width = pct + '%';
-  energyLabel.textContent = pct;
+  energyLabel.textContent = pct + '%';
+  document.getElementById('energy').setAttribute('aria-valuenow', pct);
 }
 
 /* ─────────────── 取名 ─────────────── */
 function generateName() {
-  if (isRevealing) return;
-  isRevealing = true;
+  stats.reveals++;
+  sound.play('reveal');
+  if (target !== 'auto') sound.play('celebrate');
   const want = target === 'auto' ? null : target;
-  const given = pickGivenName({ want, count: null });
+  const given = pickGivenName({ want, count: null, preferred: caught });
 
   // 組名：吳 ＋ 1~2 字
   const chars = given.chars.map(e => e.c);
@@ -285,23 +316,28 @@ function generateName() {
 
   // 揭曉
   revealName.textContent = full;
-  revealTag.innerHTML = `五行 ${wxIcons} ${wxLabels} &nbsp;·&nbsp; ${typeTags}${srcTag}<br><span style="font-size:13px;color:#c89">${pinyin}</span>`;
+  revealTag.innerHTML = `五行 ${wxIcons} ${wxLabels} &nbsp;·&nbsp; ${typeTags}${srcTag}<br><span style="font-size:13px;color:#839578">${pinyin}</span>`;
   revealEl.classList.remove('hidden');
   // 水晶迸發 + 繽紛彩紙
-  crystal.userData.base = 1.9;
   const cpos = new THREE.Vector3(); crystal.getWorldPosition(cpos);
   const confetti = [0xff5c8d, 0xffd23f, 0x3ac7ff, 0x7ed957, 0xb25cff, 0xff9ac2];
-  for (let i = 0; i < 4; i++) spawnBurst(cpos, 30, confetti[(Math.random() * confetti.length) | 0], 6, -2.5);
+  for (let i = 0; i < 6; i++) spawnBurst(cpos, 65, confetti[(Math.random() * confetti.length) | 0], 6, -2.5);
+
+  celebration = 1;
+  launchConfetti();
+  stage.classList.remove('celebrating');
+  void stage.offsetWidth;
+  stage.classList.add('celebrating');
 
   // 記錄
-  names.unshift({ name: full, chars, wx: given.elements, tags: typeTags, srcTag, ts: Date.now() });
+  names.unshift({ name: full, chars, pinyin, wx: given.elements, tags: typeTags, srcTag, ts: Date.now() });
   if (names.length > 200) names.pop();
   try { localStorage.setItem('wubaobao-names', JSON.stringify(names)); } catch (e) {}
   renderBook();
 
   // 收尾：重置能量與收集行
-  energy = 0;
-  crystal.userData.base = 1;
+  energy = Math.max(0, energy - ENERGY_MAX);
+  crystal.userData.base = 1 + energy / ENERGY_MAX * .6;
   updateEnergyUI();
   caught.length = 0;
   renderSlots();
@@ -309,7 +345,6 @@ function generateName() {
   clearTimeout(hideTimer);
   hideTimer = setTimeout(() => {
     revealEl.classList.add('hidden');
-    isRevealing = false;
   }, 4600);
 }
 
@@ -326,25 +361,34 @@ function renderSlots() {
 function loadNames() {
   try {
     const raw = localStorage.getItem('wubaobao-names');
-    names = raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    names = Array.isArray(parsed) ? parsed.filter(n => n && typeof n.name === 'string' && Array.isArray(n.chars)).slice(0, 200).map(n => ({ ...n, wx: Array.isArray(n.wx) ? n.wx : [] })) : [];
   } catch (e) { names = []; }
 }
 function renderBook() {
   bookCount.textContent = names.length;
-  if (!bookEl) return;
+  bookEl.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.textContent = '名字簿 · ' + names.length + ' 個';
+  bookEl.append(heading);
   if (!names.length) {
-    bookEl.innerHTML = '<h3>名字簿</h3><div class="book-empty">還沒有名字，快來摸一摸！</div>' +
-      '<button id="bookClear" type="button">清空</button>';
-  } else {
-    bookEl.innerHTML = '<h3>名字簿 · ' + names.length + ' 個</h3>' +
-      names.map((n, i) =>
-        `<div class="book-item"><span class="nm">${i === 0 ? '⭐ ' : ''}${n.name}</span>` +
-        `<span class="tg">${(n.wx || []).map(w => '<span style="color:' + (WU_XING[w] ? WU_XING[w].color : '#888') + '">' + (WU_XING[w] ? WU_XING[w].icon : '') + '</span>').join(' ')} ${n.tags || ''}${n.srcTag || ''}</span>` +
-        `<span class="py">${n.chars.join(' ')}</span></div>`).join('') +
-      '<button id="bookClear" type="button">清空名字簿</button>';
+    const empty = document.createElement('p'); empty.className = 'book-empty';
+    empty.textContent = '還沒有名字，快來摸一摸！'; bookEl.append(empty);
   }
-  const bc = document.getElementById('bookClear');
-  if (bc) bc.addEventListener('click', () => { names = []; saveNames(); renderBook(); });
+  names.forEach((n, i) => {
+    const row = document.createElement('div'); row.className = 'book-item';
+    for (const [cls, value] of [['nm', n.name], ['tg', (n.wx || []).join(' ') + ' · ' + (n.tags || '')], ['py', n.pinyin || n.chars.join(' ')]]) {
+      const span = document.createElement('span'); span.className = cls; span.textContent = value; row.append(span);
+    }
+    const remove = document.createElement('button'); remove.className = 'book-delete';
+    remove.textContent = '×'; remove.ariaLabel = '刪除' + n.name;
+    remove.onclick = () => { names.splice(i, 1); saveNames(); renderBook(); };
+    row.append(remove); bookEl.append(row);
+  });
+  if (names.length) {
+    const clear = document.createElement('button'); clear.id = 'bookClear'; clear.textContent = '清空名字簿';
+    clear.onclick = () => { names = []; saveNames(); renderBook(); }; bookEl.append(clear);
+  }
 }
 function saveNames() {
   try { localStorage.setItem('wubaobao-names', JSON.stringify(names)); } catch (e) {}
@@ -353,7 +397,7 @@ function saveNames() {
 /* ─────────────── 輸入：觸控／滑鼠（手指、滑鼠、iPad 全支援） ─────────────── */
 const raycaster = new THREE.Raycaster();
 let activePointer = null;
-let startPt = null, prevPt = null, traveled = 0, swipePath = [];
+let startPt = null, prevPt = null;
 
 function toNDC(e) {
   const r = renderer.domElement.getBoundingClientRect();
@@ -365,8 +409,8 @@ function toNDC(e) {
 function screenBurst(e, count, color) {
   const ndc = toNDC(e);
   raycaster.setFromCamera(ndc, camera);
-  const dir = raycaster.ray.direction.clone();
-  const pos = camera.position.clone().add(dir.multiplyScalar(3.2));
+  const pos = new THREE.Vector3();
+  raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), pos);
   spawnBurst(pos, count, color, 2.6);
 }
 function hitBubbleAt(e) {
@@ -377,35 +421,31 @@ function hitBubbleAt(e) {
   const bob = bubbles.find(x => x.mesh === hits[0].object || x.mesh === hits[0].object.parent);
   if (bob) popBubble(bob);
 }
-function swipePop(e) {
-  const ndc = toNDC(e);
-  raycaster.setFromCamera(ndc, camera);
-  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-  const pt = new THREE.Vector3();
-  if (raycaster.ray.intersectPlane(plane, pt)) {
-    swipePath.push(pt.clone());
-    // 掃過的路徑會彈破附近泡泡
-    for (const b of bubbles) {
-      if (!b.alive) continue;
-      for (const p of swipePath) {
-        if (b.mesh.position.distanceTo(p) < b.radius * 2.4) { popBubble(b); break; }
-      }
-    }
-    // 冒一團金色小氣泡當拖尾
-    spawnBurst(pt, 4, 0xffd23f, 0.8);
-    if (swipePath.length > 60) swipePath.shift();
+function swipePop(e, previous) {
+  // 用螢幕上的線段掃描：稀疏的 pointermove 也不會跳過泡泡。
+  const dx = e.clientX - previous.x, dy = e.clientY - previous.y;
+  const length2 = dx * dx + dy * dy;
+  for (const b of bubbles) {
+    const projected = b.mesh.position.clone().project(camera);
+    const x = (projected.x + 1) * innerWidth / 2;
+    const y = (1 - projected.y) * innerHeight / 2;
+    const u = length2 ? Math.max(0, Math.min(1, ((x - previous.x) * dx + (y - previous.y) * dy) / length2)) : 0;
+    const radius = b.radius * innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(27.5)) * (camera.position.z - b.mesh.position.z));
+    if (Math.hypot(x - previous.x - u * dx, y - previous.y - u * dy) < radius + 10) popBubble(b);
   }
+  screenBurst(e, 4, 0xdac37e);
 }
 
 renderer.domElement.style.touchAction = 'none';
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (activePointer !== null) return;
+  sound.play('tap');
+  if (activePointer !== null) { addEnergy(TAP_ENERGY); hitBubbleAt(e); return; }
+  renderer.domElement.setPointerCapture(e.pointerId);
   activePointer = e.pointerId;
   startPt = { x: e.clientX, y: e.clientY };
   prevPt = startPt;
-  traveled = 0;
-  swipePath.length = 0;
-  screenBurst(e, 12, 0xff8fb3);
+
+  screenBurst(e, 12, 0xa5d5c4);
   addEnergy(TAP_ENERGY);
   hitBubbleAt(e);
 });
@@ -413,10 +453,11 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   if (e.pointerId !== activePointer) return;
   const dx = e.clientX - startPt.x, dy = e.clientY - startPt.y;
   const seg = Math.hypot(e.clientX - prevPt.x, e.clientY - prevPt.y);
-  traveled += seg;
+
+  const previous = prevPt;
   prevPt = { x: e.clientX, y: e.clientY };
   if (Math.hypot(dx, dy) > 14) {       // 滑動開始
-    swipePop(e);
+    swipePop(e, previous);
     addEnergy(seg * SWIPE_ENERGY);
   }
 });
@@ -430,7 +471,7 @@ renderer.domElement.addEventListener('pointercancel', endPointer);
 renderer.domElement.addEventListener('pointerleave', (e) => { if (e.pointerId === activePointer) endPointer(e); });
 
 // 避免 iOS 捲動／縮放
-document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => { if (!e.target.closest('#book')) e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 /* ─────────────── 五行選擇 ─────────────── */
@@ -438,25 +479,112 @@ wxbar.addEventListener('click', (e) => {
   const chip = e.target.closest('.wx-chip');
   if (!chip) return;
   target = chip.dataset.w;
-  wxbar.querySelectorAll('.wx-chip').forEach(c => c.classList.toggle('active', c === chip));
+  wxbar.querySelectorAll('.wx-chip').forEach(c => { c.classList.toggle('active', c === chip); c.setAttribute('aria-pressed', String(c === chip)); });
+  sound.play('rise', .5);
 });
 
 /* ─────────────── 名字簿開關 ─────────────── */
 bookToggle.addEventListener('click', () => bookEl.classList.toggle('hidden'));
-bookEl.addEventListener('click', (e) => {
-  if (e.target.id === 'bookClear') { /* 由 renderBook 重新綁定 */ }
-});
+
 
 /* ─────────────── 視窗尺寸 ─────────────── */
 function onResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  for (const b of bubbles) b.mesh.position.x = bubbleX();
 }
 window.addEventListener('resize', onResize);
 
+/* ─────────────── 有上限的星塵與彩紙（共三次繪製） ─────────────── */
+let celebration = 0;
+const dustGeo = new THREE.BufferGeometry();
+const dustPositions = new Float32Array(90 * 3);
+for (let i = 0; i < dustPositions.length; i++) dustPositions[i] = (Math.random() - .5) * 22;
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0xc4a570, size: .035, transparent: true, opacity: .5, depthWrite: false }));
+scene.add(dust);
+const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleSheen, color: 0xffdd8a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+halo.position.copy(crystal.position); scene.add(halo);
+const CONFETTI_COUNT = 100;
+const confettiMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(.10, .19), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, depthWrite: false }), CONFETTI_COUNT);
+confettiMesh.frustumCulled = false;
+confettiMesh.visible = false;
+scene.add(confettiMesh);
+const confettiState = Array.from({ length: CONFETTI_COUNT }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), spin: 0 }));
+const dummy = new THREE.Object3D();
+let confettiTime = 0;
+function launchConfetti() {
+  confettiTime = reducedMotion ? 0 : 3.6;
+  confettiState.forEach((c, i) => {
+    c.p.copy(crystal.position);
+    const angle = Math.random() * Math.PI * 2;
+    c.v.set(Math.cos(angle) * (2 + Math.random() * 4), 3 + Math.random() * 5, 2 + Math.random() * 3);
+    c.spin = Math.random() * 6;
+    confettiMesh.setColorAt(i, new THREE.Color(PASTELS[i % PASTELS.length]));
+  });
+  confettiMesh.instanceColor.needsUpdate = true;
+}
+function updateCelebration(dt, t) {
+  celebration = Math.max(0, celebration - dt * 1.15);
+  halo.material.opacity = celebration * .65 + energy / ENERGY_MAX * .12;
+  halo.scale.setScalar(4 + (1 - celebration) * 10);
+  confettiTime = Math.max(0, confettiTime - dt);
+  confettiMesh.visible = confettiTime > 0;
+  if (confettiTime > 0) {
+    confettiMesh.material.opacity = Math.min(1, confettiTime);
+    confettiState.forEach((c, i) => {
+      c.v.y -= dt * 3.5; c.p.addScaledVector(c.v, dt);
+      dummy.position.copy(c.p); dummy.rotation.set(t * c.spin, t * 2, t * c.spin * .5);
+      dummy.updateMatrix(); confettiMesh.setMatrixAt(i, dummy.matrix);
+    });
+    confettiMesh.instanceMatrix.needsUpdate = true;
+  }
+}
+
+/* ─────────────── 全螢幕：不支援時顯示 Safari 操作提示 ─────────────── */
+const fullscreenButton = document.getElementById('fullscreenToggle');
+let toastTimer;
+function fullscreenHint() {
+  const toast = document.getElementById('toast');
+  toast.textContent = '此瀏覽器暫不支援全螢幕。iPad 可在 Safari 點「分享」→「加入主畫面」，從主畫面開啟。';
+  toast.classList.remove('hidden'); clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 7000);
+}
+fullscreenButton.addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+    else fullscreenHint();
+  } catch { fullscreenHint(); }
+});
+document.addEventListener('fullscreenchange', () => {
+  const active = !!document.fullscreenElement;
+  fullscreenButton.ariaLabel = active ? '退出全螢幕' : '進入全螢幕';
+  fullscreenButton.querySelector('b').textContent = active ? '⊡' : '⛶';
+  fullscreenButton.querySelector('span').textContent = active ? '退出' : '全螢幕';
+  onResize();
+});
+// 鍵盤亂敲也累積；有焦點的按鈕仍保留原生鍵盤操作。
+document.addEventListener('keydown', e => {
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.key === 'Tab' || e.key === 'Escape' || e.target.closest('button')) return;
+  sound.unlock(); sound.play('tap'); addEnergy(TAP_ENERGY);
+});
+// 只在測試網址提供唯讀快照，測試仍須走真實輸入事件。
+if (new URLSearchParams(location.search).has('qa')) {
+  window.wubaobaoQA = () => ({ energy, names: names.length, pops: stats.pops, reveals: stats.reveals,
+    caught: caught.map(e => e.c), audio: sound.ctx?.state, sound: { ...sound.settings },
+    gains: sound.ctx ? [sound.effects.gain.value, sound.music.gain.value] : [],
+    voices: sound.voices, particles: P.active, drawCalls: renderer.info.render.calls,
+    textures: renderer.info.memory.textures, pixelRatio: renderer.getPixelRatio(),
+    bubbles: bubbles.map(b => { const p = b.mesh.position.clone().project(camera); return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2, c: b.entry.c }; }) });
+}
+
 /* ─────────────── 主迴圈 ─────────────── */
 const clock = new THREE.Clock();
+function visibleWidth() { return Math.min(28, 16 * camera.aspect); }
+function bubbleX() { return innerWidth > 900 ? -2.5 + Math.random() * 12 : (Math.random() - .5) * visibleWidth(); }
+
 initParticles();
 loadNames();
 renderBook();
@@ -464,8 +592,8 @@ renderSlots();
 // 隨機撒第一波泡泡
 for (let i = 0; i < BUBBLE_COUNT; i++) {
   makeBubble(
-    new THREE.Vector3((Math.random() - 0.5) * 15, (Math.random() - 0.5) * 11, (Math.random() - 0.5) * 4 - 1),
-    0.5 + Math.random() * 0.6
+    new THREE.Vector3(bubbleX(), (Math.random() - 0.5) * 11, (Math.random() - 0.5) * 4 - 1),
+    0.38 + Math.random() * 0.34
   );
 }
 
@@ -475,15 +603,22 @@ function animate() {
   const t = clock.elapsedTime;
 
   updateBubbles(dt, t);
+  updateCelebration(dt, t);
+  if (!reducedMotion) {
+    camera.position.x = Math.sin(t * .12) * .07;
+    camera.position.y = .4 + Math.sin(t * .17) * .045;
+    dust.rotation.z = Math.sin(t * .08) * .035;
+  }
   updateParticles(dt);
 
   // 水晶呼吸 + 能量脈動
-  const pulse = 1 + Math.sin(t * 2.2) * 0.06;
-  crystal.scale.setScalar(crystal.userData.base * pulse);
+  const pulse = reducedMotion ? 1 : 1 + Math.sin(t * 2.2) * 0.06;
+  crystal.scale.setScalar((crystal.userData.base + celebration * .9) * pulse);
   crystal.rotation.y += dt * 0.4;
   crystal.rotation.x = Math.sin(t * 0.5) * 0.15;
-  crystalMat.emissiveIntensity = 0.55 + (energy / ENERGY_MAX) * 1.4;
+  crystalMat.emissiveIntensity = 0.35 + (energy / ENERGY_MAX) * 1.3 + celebration * 2;
 
+  crystalMat.color.setHSL(.42 - Math.min(energy / ENERGY_MAX, 1) * .28, .32, .72);
   renderer.render(scene, camera);
 }
 animate();

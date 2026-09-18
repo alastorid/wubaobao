@@ -1,241 +1,101 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-html, body {
-  height: 100%;
-  overflow: hidden;
-  position: fixed;
-  inset: 0;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-  font-family: "PingFang TC", "Noto Sans TC", "Hiragino Sans TC", "Microsoft JhengHei", sans-serif;
-}
-
-body {
-  background:
-    radial-gradient(120% 90% at 20% 10%, #ffdbe9 0%, #ffe9f2 35%, #e8f4ff 70%, #d5ecff 100%);
-}
-
-#stage {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
+:root { color: #365952; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; }
+html, body { position: fixed; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+body { background: radial-gradient(ellipse at 70% 55%, #fff6e3 0%, transparent 50%), radial-gradient(ellipse at 10% 5%, #d9eae5 0%, transparent 55%), #f3f5ed; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible { outline: 3px solid #c69644; outline-offset: 4px; }
+button:active { transform: scale(.94); }
+#stage, #ui { position: absolute; inset: 0; }
 #stage canvas { display: block; }
-
-#ui {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;   /* 讓觸控都進到 3D；僅可點元件自行開啟 */
+#ui { z-index: 2; pointer-events: none; }
+#tools, #wxbar, #bookToggle, #book { pointer-events: auto; }
+#topbar { position: absolute; top: max(24px, env(safe-area-inset-top)); left: max(28px, env(safe-area-inset-left)); display: flex; align-items: center; gap: 30px; }
+#brand { display: flex; align-items: center; gap: 12px; }
+.surname-chip { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #6e9286; border-radius: 50% 50% 14px 14px; background: #477568; color: #fffdf1; font: 28px Georgia, "Songti TC", serif; }
+#brandText { font-size: 17px; letter-spacing: .12em; font-weight: 600; }
+#brandText small { display: block; font-size: 9px; margin-top: 5px; font-weight: 400; letter-spacing: .18em; color: #6e8880; }
+#energy { width: 150px; height: 18px; background: #fff9; border: 1px solid #c5d6c8; padding: 3px; border-radius: 20px; position: relative; }
+#energy::before { content: '取名能量'; position: absolute; top: 25px; left: 0; font-size: 10px; letter-spacing: .14em; color: #6d857a; }
+#energyFill { width: 0; height: 100%; border-radius: 10px; background: linear-gradient(90deg, #8abcb0, #ddba66); transition: width .16s ease-out; }
+#energyLabel { position: absolute; right: 0; top: 25px; font-size: 10px; color: #6d857a; }
+#tools { position: absolute; top: max(24px, env(safe-area-inset-top)); right: max(28px, env(safe-area-inset-right)); display: flex; gap: 8px; }
+#tools button { display: flex; align-items: center; gap: 7px; min-height: 44px; border-radius: 24px; border: 1px solid #fff; padding: 8px 14px; background: #ffffff80; font-size: 11px; }
+#tools b { font-size: 20px; font-weight: 400; }
+#tools button[aria-pressed="false"] { opacity: .55; }
+#intro { position: absolute; left: max(6vw, env(safe-area-inset-left)); top: 27%; }
+#intro > span { font-size: 11px; letter-spacing: .18em; color: #7b9185; }
+#intro h1 { font: 400 clamp(30px, 3.4vw, 54px)/1.65 "Songti TC", "Noto Serif TC", serif; letter-spacing: .10em; margin: 14px 0; }
+#intro p { font-size: 11px; letter-spacing: .16em; color: #81988c; }
+#workline { position: absolute; left: 50%; top: max(105px, calc(env(safe-area-inset-top) + 82px)); transform: translateX(-50%); display: flex; gap: 9px; }
+.slot { display: grid; place-items: center; width: 48px; height: 57px; border: 1px solid #fff; border-radius: 15px; background: #fff9; box-shadow: 0 5px 22px #496e5910; font: 29px "Songti TC", serif; }
+.slot.surname { background: #477568; color: #fffbe9; border-color: #477568; }
+.slot.empty { color: #b9c9bf; }
+.slot.filled { animation: pop .35s ease; }
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } }
+#wxbar { position: absolute; bottom: max(86px, calc(env(safe-area-inset-bottom) + 70px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid #fff; border-radius: 36px; background: #ffffffb8; box-shadow: 0 8px 35px #4664540a; }
+.wx-label { white-space: nowrap; font-size: 11px; margin-right: 5px; color: #70877d; }
+.wx-chip { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: none; background: transparent; font-size: 15px; transition: background .2s, transform .2s; }
+.wx-chip.auto { width: 50px; font-size: 13px; }
+.wx-chip.active { background: #477568; color: white; box-shadow: 0 4px 12px #36595225; }
+.wx-chip[data-w="金"].active { background: #ae873d; }
+.wx-chip[data-w="木"].active { background: #54836c; }
+.wx-chip[data-w="水"].active { background: #518caa; }
+.wx-chip[data-w="火"].active { background: #c57c64; }
+.wx-chip[data-w="土"].active { background: #a18b6b; }
+#reveal { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse, #fbf9e7a0, transparent 70%); }
+.hidden, #reveal.hidden, #book.hidden { display: none; }
+.card { width: min(480px, calc(100vw - 36px)); text-align: center; border: 1px solid #fff; border-radius: 120px 120px 30px 30px; padding: 48px 20px 30px; background: #fffff5ed; box-shadow: 0 25px 80px #617c6130, inset 0 0 0 8px #fff8; animation: cardIn .7s cubic-bezier(.16,1,.3,1); }
+@keyframes cardIn { from { transform: translateY(35px) scale(.65); opacity: 0; } to { transform: none; opacity: 1; } }
+.reveal-eyebrow { font-size: 12px; letter-spacing: .3em; color: #a4884b; }
+#revealName { margin: 18px 0 10px; font: 500 clamp(62px, 12vw, 100px)/1.3 "Songti TC", serif; letter-spacing: .08em; color: #365f51; text-shadow: 0 4px 0 #e4eacb; }
+#revealTag { font-size: 13px; color: #7c886a; line-height: 2; }
+.hint { font-size: 12px; color: #8b9c8f; margin-top: 22px; }
+#bookToggle { position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); right: max(28px, env(safe-area-inset-right)); border: 1px solid #fff; border-radius: 28px; background: #fff9; padding: 12px 20px; min-height: 46px; font-size: 13px; }
+#bookCount { background: #477568; color: #fff; border-radius: 20px; padding: 3px 8px; margin-left: 8px; font-size: 10px; }
+#book { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: max(86px, calc(env(safe-area-inset-bottom) + 70px)); width: min(380px, calc(100vw - 32px)); max-height: 55vh; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 20px; border: 1px solid white; border-radius: 24px; background: #fcfff8f5; box-shadow: 0 14px 60px #36595230; }
+#book h3 { font-size: 15px; margin-bottom: 14px; }
+.book-item { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #dee7db; padding: 13px 0; }
+.nm { font: 22px "Songti TC", serif; white-space: nowrap; }
+.tg { font-size: 10px; color: #81917b; }
+.py { font-size: 10px; color: #81917b; margin-left: auto; }
+.book-delete { border: 0; background: transparent; padding: 10px; font-size: 18px; }
+.book-empty { font-size: 13px; color: #81917b; }
+#bookClear { margin-top: 16px; width: 100%; padding: 12px; border-radius: 14px; border: 1px solid #ccd9c8; background: transparent; font-size: 12px; }
+#footerHint { position: absolute; left: max(28px, env(safe-area-inset-left)); bottom: max(40px, calc(env(safe-area-inset-bottom) + 12px)); color: #8a9c8f; font-size: 11px; letter-spacing: .06em; }
+#toast { z-index: 10; position: absolute; top: 85px; right: 24px; width: min(340px, calc(100vw - 48px)); padding: 18px; border-radius: 18px; background: #365952; color: white; font-size: 13px; line-height: 1.7; box-shadow: 0 8px 25px #36595230; }
+#stage.celebrating { animation: celebrate .55s ease-out; }
+@keyframes celebrate { 0% { transform: scale(1); } 18% { transform: scale(1.025) rotate(.2deg); } 45% { transform: scale(1.01) rotate(-.2deg); } 100% { transform: scale(1); } }
+@media (max-width: 900px) {
+  #intro { top: 205px; left: 28px; }
+  #intro h1 { font-size: 28px; }
+  #intro > span, #intro p { font-size: 9px; }
+  #topbar { gap: 20px; }
+  #energy { width: 95px; }
+  #tools button { padding: 8px 10px; }
 }
-
-/* ── 頂欄 ─────────────────────────────── */
-#topbar {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  padding: max(12px, env(safe-area-inset-top)) 16px 0;
-  display: flex;
-  align-items: center;
-  gap: 14px;
+@media (max-width: 600px) {
+  #topbar { top: max(16px, env(safe-area-inset-top)); left: max(18px, env(safe-area-inset-left)); }
+  #brandText { font-size: 14px; }
+  .surname-chip { width: 38px; height: 42px; font-size: 24px; }
+  #energy { position: absolute; top: 57px; left: 0; width: calc(100vw - 36px); height: 13px; }
+  #energy::before, #energyLabel { top: 17px; font-size: 9px; }
+  #tools { right: max(14px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); gap: 4px; }
+  #tools button { width: 38px; padding: 7px; justify-content: center; border-radius: 50%; }
+  #tools span { display: none; }
+  #workline { top: max(120px, calc(env(safe-area-inset-top) + 106px)); }
+  #intro { top: 198px; left: 0; width: 100%; text-align: center; }
+  #intro > span, #intro p { display: none; }
+  #intro h1 { display: inline-block; background: #f3f5edb8; padding: 4px 12px; border-radius: 20px; font-size: 20px; margin: 0; letter-spacing: .1em; }
+  #intro br { display: none; }
+  #wxbar { gap: 0; padding: 5px 8px; bottom: max(86px, calc(env(safe-area-inset-bottom) + 65px)); }
+  .wx-label { margin-right: 4px; }
+  #bookToggle { right: 18px; bottom: max(20px, env(safe-area-inset-bottom)); padding: 12px; }
+  #footerHint { left: 18px; bottom: max(32px, calc(env(safe-area-inset-bottom) + 12px)); max-width: 52%; font-size: 10px; line-height: 1.8; }
 }
-#brand { display: flex; align-items: center; gap: 8px; }
-.surname-chip {
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
-  font-size: 26px; font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, #ff6b9d, #ff3d7f);
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(255, 61, 127, .4);
+@media (max-height: 550px) and (min-width: 601px) {
+  #intro { top: 130px; } #intro h1 { font-size: 24px; }
+  #workline { top: 85px; } .slot { height: 43px; width: 40px; font-size: 24px; }
+  #wxbar { bottom: 58px; } #footerHint { bottom: 22px; } #bookToggle { bottom: 12px; }
+  .card { padding: 20px; width: 370px; } #revealName { font-size: 60px; margin: 10px; }
 }
-#brandText {
-  color: #b0305f; font-weight: 700; font-size: 17px;
-  text-shadow: 0 1px 0 #fff;
-}
-
-/* ── 取名能量瓶 ───────────────────────── */
-#energy {
-  flex: 1;
-  height: 22px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .55);
-  border: 2px solid rgba(255, 120, 160, .5);
-  overflow: hidden;
-  position: relative;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,.08);
-}
-#energyFill {
-  height: 100%;
-  width: 0%;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #ffb3c9, #ff5c8d, #ff2e74);
-  transition: width .18s ease-out;
-  position: relative;
-}
-#energyLabel {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  text-shadow: 0 1px 2px rgba(0,0,0,.3);
-}
-
-/* ── 組合中的名字 ─────────────────────── */
-#workline {
-  position: absolute;
-  top: 86px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; gap: 10px;
-  align-items: center;
-}
-.slot {
-  width: 52px; height: 62px;
-  display: grid; place-items: center;
-  font-size: 34px; font-weight: 800;
-  border-radius: 14px;
-  background: rgba(255,255,255,.7);
-  box-shadow: 0 4px 14px rgba(176,60,110,.18);
-}
-.slot.surname { background: linear-gradient(135deg,#ff6b9d,#ff3d7f); color:#fff; }
-.slot.empty { color: #d9a8bd; }
-.slot.filled { color:#b0305f; animation: pop .35s ease; }
-@keyframes pop { 0%{transform:scale(.4)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
-
-/* ── 喜用神五行條 ─────────────────────── */
-#wxbar {
-  position: absolute;
-  top: 158px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(255,255,255,.7);
-  padding: 6px 10px;
-  border-radius: 22px;
-  box-shadow: 0 4px 14px rgba(176,60,110,.18);
-}
-.wx-label { font-size: 13px; font-weight: 700; color: #b0305f; margin-right: 2px; }
-.wx-chip {
-  border: 1px solid transparent;
-  background: rgba(255,255,255,.6);
-  color: #b0305f;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  font-size: 15px; font-weight: 700;
-  cursor: pointer;
-  display: grid; place-items: center;
-  transition: transform .12s, box-shadow .12s;
-}
-.wx-chip.auto { width: auto; padding: 0 12px; border-radius: 16px; }
-.wx-chip:active { transform: scale(.9); }
-.wx-chip.active {
-  color: #fff;
-  transform: scale(1.15);
-  box-shadow: 0 3px 10px rgba(0,0,0,.25);
-}
-.wx-chip[data-w="金"].active { background: #d4af37; }
-.wx-chip[data-w="木"].active { background: #2e9e5b; }
-.wx-chip[data-w="水"].active { background: #3a86ff; }
-.wx-chip[data-w="火"].active { background: #ff5c5c; }
-.wx-chip[data-w="土"].active { background: #b08452; }
-.wx-chip.auto.active { background: #ff3d7f; }
-
-/* ── 取名揭曉 ─────────────────────────── */
-#reveal {
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.25), rgba(255,220,235,.15) 60%, transparent 80%);
-}
-#reveal.hidden { display: none; }
-.card {
-  text-align: center;
-  padding: 34px 46px 26px;
-  border-radius: 30px;
-  background: rgba(255,255,255,.9);
-  box-shadow: 0 20px 60px rgba(176,60,110,.35);
-  border: 3px solid #ffc2d6;
-  animation: cardIn .45s cubic-bezier(.2,1.4,.4,1);
-}
-@keyframes cardIn { 0%{transform:scale(.3);opacity:0} 100%{transform:scale(1);opacity:1} }
-#revealName {
-  font-size: clamp(64px, 22vw, 120px);
-  font-weight: 900;
-  letter-spacing: .06em;
-  color: #b0305f;
-  text-shadow: 0 6px 0 rgba(255,94,141,.25);
-}
-#revealTag {
-  margin-top: 6px;
-  color: #e6739e;
-  font-size: 15px;
-  font-weight: 700;
-}
-.hint { margin-top: 16px; color: #a86; font-size: 14px; border-top: 1px dashed #f0c4d4; padding-top: 14px; }
-
-/* ── 名字簿 ───────────────────────────── */
-#bookToggle {
-  position: absolute;
-  right: 14px; bottom: 64px;
-  pointer-events: auto;
-  border: none; cursor: pointer;
-  padding: 10px 16px;
-  border-radius: 20px;
-  font-size: 15px; font-weight: 700;
-  color: #b0305f;
-  background: rgba(255,255,255,.85);
-  box-shadow: 0 6px 18px rgba(176,60,110,.25);
-}
-#bookCount {
-  display: inline-grid; place-items: center;
-  min-width: 22px; height: 22px; padding: 0 6px;
-  border-radius: 11px;
-  background: #ff3d7f; color: #fff; font-size: 12px; margin-left: 4px;
-}
-#book {
-  position: absolute;
-  right: 14px; bottom: 112px;
-  width: min(320px, calc(100vw - 28px));
-  max-height: 46vh;
-  overflow: auto;
-  pointer-events: auto;
-  background: rgba(255,255,255,.92);
-  border-radius: 18px;
-  padding: 12px;
-  box-shadow: 0 12px 40px rgba(176,60,110,.3);
-}
-#book.hidden { display: none; }
-#book h3 { font-size: 16px; color:#b0305f; margin-bottom: 8px; }
-.book-item {
-  display: flex; align-items: baseline; gap: 8px;
-  padding: 8px 6px;
-  border-bottom: 1px dashed #f0c4d4;
-  font-size: 17px;
-}
-.book-item:last-child { border-bottom: none; }
-.book-item .nm { font-weight: 800; color: #8a2e52; font-size: 19px; letter-spacing: .04em; }
-.book-item .tg { color: #e68; font-size: 12px; }
-.book-item .py { color: #b47aa0; font-size: 12px; margin-left: auto; }
-.book-empty { color: #c89; padding: 4px 2px; font-size: 14px; }
-#bookClear {
-  margin-top: 8px; width: 100%;
-  border: 1px solid #f0c4d4; background: #fff; color: #d66a93;
-  border-radius: 12px; padding: 8px; font-size: 13px; cursor: pointer;
-}
-
-/* ── 底部提示 ─────────────────────────── */
-#footerHint {
-  position: absolute;
-  left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  white-space: nowrap;
-  color: #c06a92;
-  background: rgba(255,255,255,.6);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(176,60,110,.15);
-  text-align: center;
-}
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }

@@ -5,21 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#ffe9f2" />
+  <meta name="theme-color" content="#edf6f4" />
   <title>吳 · 泡泡取名機</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div id="stage"></div>
 
   <div id="ui">
+    <nav id="tools" aria-label="遊戲設定">
+      <button id="effectsToggle" type="button"><b aria-hidden="true">♬</b><span>音效</span></button>
+      <button id="musicToggle" type="button"><b aria-hidden="true">♫</b><span>音樂</span></button>
+      <button id="fullscreenToggle" type="button" aria-label="進入全螢幕"><b aria-hidden="true">⛶</b><span>全螢幕</span></button>
+    </nav>
+    <div id="toast" role="status" class="hidden"></div>
+    <div id="intro"><span>給小小的你，一個美好的名字</span><h1>好名字，<br>在泡泡裡相遇。</h1><p>輕觸收集 · 滑動探索 · 滿格揭曉</p></div>
     <!-- 頂欄：標題 + 取名能量瓶 -->
     <header id="topbar">
       <div id="brand">
         <span class="surname-chip">吳</span>
-        <span id="brandText">泡泡取名機</span>
+        <span id="brandText">泡泡取名機<small>一觸 · 一字 · 一份祝福</small></span>
       </div>
-      <div id="energy" title="取名能量">
+      <div id="energy" role="progressbar" aria-label="取名能量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="取名能量">
         <div id="energyFill"><span id="energyLabel">0</span></div>
       </div>
     </header>
@@ -34,18 +42,18 @@
     <!-- 喜用神（父母可選想補的五行，也可自動） -->
     <div id="wxbar">
       <span class="wx-label">喜用</span>
-      <button type="button" class="wx-chip auto active" data-w="auto">自動</button>
-      <button type="button" class="wx-chip" data-w="金">金</button>
-      <button type="button" class="wx-chip" data-w="木">木</button>
-      <button type="button" class="wx-chip" data-w="水">水</button>
-      <button type="button" class="wx-chip" data-w="火">火</button>
-      <button type="button" class="wx-chip" data-w="土">土</button>
+      <button type="button" class="wx-chip auto active" aria-pressed="true" data-w="auto">自動</button>
+      <button type="button" class="wx-chip" aria-pressed="false" data-w="金">金</button>
+      <button type="button" class="wx-chip" aria-pressed="false" data-w="木">木</button>
+      <button type="button" class="wx-chip" aria-pressed="false" data-w="水">水</button>
+      <button type="button" class="wx-chip" aria-pressed="false" data-w="火">火</button>
+      <button type="button" class="wx-chip" aria-pressed="false" data-w="土">土</button>
     </div>
 
     <!-- 取名揭曉 -->
     <div id="reveal" class="hidden">
-      <div class="card">
-        <div id="revealName"></div>
+      <div class="card"><div class="reveal-eyebrow">✧ 為你遇見的名字 ✧</div>
+        <div id="revealName" aria-live="polite"></div>
         <div id="revealTag"></div>
         <div class="hint">再摸一摸，取下一個名字！</div>
       </div>
@@ -55,7 +63,7 @@
     <button id="bookToggle" type="button">名字簿 <span id="bookCount">0</span></button>
     <section id="book" class="hidden"></section>
 
-    <div id="footerHint">摸一摸、滑一滑，能量滿了就取名！點中泡泡可收集好字</div>
+    <div id="footerHint">每一次小小的觸碰，都離好名字更近一點。</div>
   </div>
 
   <script src="js/namepool.js"></script>
