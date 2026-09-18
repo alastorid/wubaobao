@@ -1,0 +1,241 @@
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: "PingFang TC", "Noto Sans TC", "Hiragino Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(120% 90% at 20% 10%, #ffdbe9 0%, #ffe9f2 35%, #e8f4ff 70%, #d5ecff 100%);
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+#stage canvas { display: block; }
+
+#ui {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;   /* 讓觸控都進到 3D；僅可點元件自行開啟 */
+}
+
+/* ── 頂欄 ─────────────────────────────── */
+#topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: max(12px, env(safe-area-inset-top)) 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+#brand { display: flex; align-items: center; gap: 8px; }
+.surname-chip {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  font-size: 26px; font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #ff6b9d, #ff3d7f);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(255, 61, 127, .4);
+}
+#brandText {
+  color: #b0305f; font-weight: 700; font-size: 17px;
+  text-shadow: 0 1px 0 #fff;
+}
+
+/* ── 取名能量瓶 ───────────────────────── */
+#energy {
+  flex: 1;
+  height: 22px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .55);
+  border: 2px solid rgba(255, 120, 160, .5);
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.08);
+}
+#energyFill {
+  height: 100%;
+  width: 0%;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #ffb3c9, #ff5c8d, #ff2e74);
+  transition: width .18s ease-out;
+  position: relative;
+}
+#energyLabel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+
+/* ── 組合中的名字 ─────────────────────── */
+#workline {
+  position: absolute;
+  top: 86px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 10px;
+  align-items: center;
+}
+.slot {
+  width: 52px; height: 62px;
+  display: grid; place-items: center;
+  font-size: 34px; font-weight: 800;
+  border-radius: 14px;
+  background: rgba(255,255,255,.7);
+  box-shadow: 0 4px 14px rgba(176,60,110,.18);
+}
+.slot.surname { background: linear-gradient(135deg,#ff6b9d,#ff3d7f); color:#fff; }
+.slot.empty { color: #d9a8bd; }
+.slot.filled { color:#b0305f; animation: pop .35s ease; }
+@keyframes pop { 0%{transform:scale(.4)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+/* ── 喜用神五行條 ─────────────────────── */
+#wxbar {
+  position: absolute;
+  top: 158px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.7);
+  padding: 6px 10px;
+  border-radius: 22px;
+  box-shadow: 0 4px 14px rgba(176,60,110,.18);
+}
+.wx-label { font-size: 13px; font-weight: 700; color: #b0305f; margin-right: 2px; }
+.wx-chip {
+  border: 1px solid transparent;
+  background: rgba(255,255,255,.6);
+  color: #b0305f;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: transform .12s, box-shadow .12s;
+}
+.wx-chip.auto { width: auto; padding: 0 12px; border-radius: 16px; }
+.wx-chip:active { transform: scale(.9); }
+.wx-chip.active {
+  color: #fff;
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(0,0,0,.25);
+}
+.wx-chip[data-w="金"].active { background: #d4af37; }
+.wx-chip[data-w="木"].active { background: #2e9e5b; }
+.wx-chip[data-w="水"].active { background: #3a86ff; }
+.wx-chip[data-w="火"].active { background: #ff5c5c; }
+.wx-chip[data-w="土"].active { background: #b08452; }
+.wx-chip.auto.active { background: #ff3d7f; }
+
+/* ── 取名揭曉 ─────────────────────────── */
+#reveal {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.25), rgba(255,220,235,.15) 60%, transparent 80%);
+}
+#reveal.hidden { display: none; }
+.card {
+  text-align: center;
+  padding: 34px 46px 26px;
+  border-radius: 30px;
+  background: rgba(255,255,255,.9);
+  box-shadow: 0 20px 60px rgba(176,60,110,.35);
+  border: 3px solid #ffc2d6;
+  animation: cardIn .45s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes cardIn { 0%{transform:scale(.3);opacity:0} 100%{transform:scale(1);opacity:1} }
+#revealName {
+  font-size: clamp(64px, 22vw, 120px);
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #b0305f;
+  text-shadow: 0 6px 0 rgba(255,94,141,.25);
+}
+#revealTag {
+  margin-top: 6px;
+  color: #e6739e;
+  font-size: 15px;
+  font-weight: 700;
+}
+.hint { margin-top: 16px; color: #a86; font-size: 14px; border-top: 1px dashed #f0c4d4; padding-top: 14px; }
+
+/* ── 名字簿 ───────────────────────────── */
+#bookToggle {
+  position: absolute;
+  right: 14px; bottom: 64px;
+  pointer-events: auto;
+  border: none; cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 15px; font-weight: 700;
+  color: #b0305f;
+  background: rgba(255,255,255,.85);
+  box-shadow: 0 6px 18px rgba(176,60,110,.25);
+}
+#bookCount {
+  display: inline-grid; place-items: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 11px;
+  background: #ff3d7f; color: #fff; font-size: 12px; margin-left: 4px;
+}
+#book {
+  position: absolute;
+  right: 14px; bottom: 112px;
+  width: min(320px, calc(100vw - 28px));
+  max-height: 46vh;
+  overflow: auto;
+  pointer-events: auto;
+  background: rgba(255,255,255,.92);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 12px 40px rgba(176,60,110,.3);
+}
+#book.hidden { display: none; }
+#book h3 { font-size: 16px; color:#b0305f; margin-bottom: 8px; }
+.book-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 6px;
+  border-bottom: 1px dashed #f0c4d4;
+  font-size: 17px;
+}
+.book-item:last-child { border-bottom: none; }
+.book-item .nm { font-weight: 800; color: #8a2e52; font-size: 19px; letter-spacing: .04em; }
+.book-item .tg { color: #e68; font-size: 12px; }
+.book-item .py { color: #b47aa0; font-size: 12px; margin-left: auto; }
+.book-empty { color: #c89; padding: 4px 2px; font-size: 14px; }
+#bookClear {
+  margin-top: 8px; width: 100%;
+  border: 1px solid #f0c4d4; background: #fff; color: #d66a93;
+  border-radius: 12px; padding: 8px; font-size: 13px; cursor: pointer;
+}
+
+/* ── 底部提示 ─────────────────────────── */
+#footerHint {
+  position: absolute;
+  left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  white-space: nowrap;
+  color: #c06a92;
+  background: rgba(255,255,255,.6);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(176,60,110,.15);
+  text-align: center;
+}
