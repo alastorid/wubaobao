@@ -12,7 +12,8 @@
 - WebAudio 合成點擊、破泡、能量音階、揭曉小號角／叮咚與五行慶祝音；低音量氛圍樂。
 - 首次主動互動才開啟音訊，音效／音樂獨立開關並記住設定。
 - 全螢幕切換；不支援的瀏覽器顯示 Safari「加入主畫面」提示。
-- 480 個不重複繁體字：金 83、木 104、水 101、火 95、土 97。
+- 512 個不重複繁體字：金 90、木 110、水 106、火 102、土 104。
+- 新增 32 個 2～7 畫的美字；共 78 個 1～8 畫的字附起名寓意，揭曉時顯示字、筆畫及寓意。
 - 名字簿支援檢視、單筆刪除、清空；保留 `wubaobao-names` 舊資料格式。
 - 無 CDN、無建置步驟、無外部執行期請求；下載整份專案後可在離線本機 HTTP 伺服器遊玩。
 
@@ -39,6 +40,9 @@ tests/              可重跑的資料與瀏覽器測試
 ## 字庫規則
 
 每字含 `c` 繁體字、`p` 拼音、`s` 實寫筆畫、`w` 五行、`b` 美字標記、`cat` 構形。
+精選少筆畫字另附 `meaning` 起名寓意（給孩子的祝願，並非字典完整釋義）。
+例如仁（4 畫，寬厚仁愛）、允（4 畫，誠信公允）、吉（6 畫，吉祥美好）、帆（6 畫，揚帆遠行）。
+新增字參與原有抽字與收集流程，保留完整字庫。
 本草字另有 `src`，列出對應藥材名稱。經方／本草是來源，並非六書類別；本庫涵蓋
 象形、指事、會意、形聲四種構形，不宣稱涵蓋六書全部類型。
 
@@ -50,6 +54,9 @@ tests/              可重跑的資料與瀏覽器測試
 來源：[Unicode Unihan 說明](https://www.unicode.org/reports/tr38/)、
 [Unicode 17.0 資料](https://www.unicode.org/Public/17.0.0/ucd/Unihan.zip)、
 [教育部「形聲」解釋](https://dict.revised.moe.edu.tw/dictView.jsp?ID=110679&la=1&powerMode=0)。
+起名寓意參考：[教育部「仁」](https://dict.concised.moe.edu.tw/dictView.jsp?ID=36200&la=1&powerMode=0)、
+[「允」](https://dict.variants.moe.edu.tw/dictView.jsp?ID=2401&la=1)、
+[「妤」](https://dict.variants.moe.edu.tw/dictView.jsp?ID=9754&la=1)（本義為古代女官名，取名延伸寄寓才華）。
 Unicode 資料授權見 `UNICODE-LICENSE.txt`。three.js 保留原有 MIT 授權。
 
 ## 驗證

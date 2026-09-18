@@ -37,6 +37,7 @@ const slot2 = document.getElementById('slot2');
 const revealEl = document.getElementById('reveal');
 const revealName = document.getElementById('revealName');
 const revealTag = document.getElementById('revealTag');
+const revealMeaning = document.getElementById('revealMeaning');
 const bookToggle = document.getElementById('bookToggle');
 const bookCount = document.getElementById('bookCount');
 const bookEl = document.getElementById('book');
@@ -317,6 +318,7 @@ function generateName() {
   // 揭曉
   revealName.textContent = full;
   revealTag.innerHTML = `五行 ${wxIcons} ${wxLabels} &nbsp;·&nbsp; ${typeTags}${srcTag}<br><span style="font-size:13px;color:#839578">${pinyin}</span>`;
+  revealMeaning.textContent = metas.map(m => `${m.c} · ${m.s}畫${m.meaning ? ' · ' + m.meaning : ''}`).join('\n');
   revealEl.classList.remove('hidden');
   // 水晶迸發 + 繽紛彩紙
   const cpos = new THREE.Vector3(); crystal.getWorldPosition(cpos);

@@ -1,6 +1,14 @@
 const assert = require('node:assert/strict');
 const { POOL, WU_XING, pickGivenName } = require('../js/namepool.js');
-assert(POOL.all.length >= 350);
+assert(POOL.all.length >= 512);
+for (const c of '仁允友天升久千士力之吉合如伊亦同帆舟行志君孝宏廷良利妤言辰秀才申') {
+  const e = POOL.all.find(e => e.c === c);
+  assert(e && e.s <= 7 && e.b === 1 && e.meaning, `少筆畫美字缺漏：${c}`);
+}
+for (const want of Object.keys(WU_XING)) {
+  const name = pickGivenName({ want, count: 2, maxStrokes: 8 });
+  assert(name.chars.every(e => e.w === want && e.s <= 8));
+}
 assert.equal(new Set(POOL.all.map(e => e.c)).size, POOL.all.length);
 for (const e of POOL.all) {
   assert.equal([...e.c].length, 1); assert(e.p && typeof e.p === 'string');

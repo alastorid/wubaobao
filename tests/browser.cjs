@@ -34,6 +34,11 @@ const out = process.env.QA_OUTPUT || '/tmp/wubaobao-qa';
   for(let i=0;i<10;i++)await page.mouse.click(30,450);
   assert.equal((await qa()).names,count+1);
   assert.match(await page.locator('#revealName').textContent(),/^吳.{1,2}$/u);
+  assert(await page.evaluate(() => {
+    const name = JSON.parse(localStorage.getItem('wubaobao-names'))[0];
+    const text = document.getElementById('revealMeaning').textContent;
+    return name.chars.every(c => { const e = POOL.all.find(e => e.c === c); return text.includes(`${c} · ${e.s}畫`) && (!e.meaning || text.includes(e.meaning)); });
+  }));
   await page.waitForTimeout(100);
   assert.equal((await qa()).audio,'running');
   assert(await page.evaluate(()=>audioPeak()) > .00001, '音訊輸出有波形');
@@ -90,7 +95,7 @@ const out = process.env.QA_OUTPUT || '/tmp/wubaobao-qa';
   // 大量輸入後資源仍受上限控制。
   await page.setViewportSize({width:1366,height:900});
   for(let i=0;i<150;i++) await page.mouse.click(30,450);
-  const stress=await qa();assert(stress.particles<=700);assert(stress.voices<=48);assert(stress.textures<=485);
+  const stress=await qa();assert(stress.particles<=700);assert(stress.voices<=48);assert(stress.textures<=517);
   await page.locator('#bookToggle').click();await page.locator('#bookClear').click();assert.equal((await qa()).names,0);
   await page.locator('#bookToggle').click();
   await page.evaluate(()=>localStorage.setItem('wubaobao-names','{}'));await page.reload();await page.waitForFunction(()=>window.wubaobaoQA);assert.equal((await qa()).names,0);
