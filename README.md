@@ -15,7 +15,7 @@
   切換喜用神會清除本輪選字，避免顯示與新五行不符的鎖字承諾。
 - 球池由實際畫布尺寸配合正交鏡頭繪製，不用會造成邊緣視差的透視鏡頭。
   ResizeObserver 在 iPad 轉向、工具列或視窗尺寸改變後重排球池與更新觸控座標。
-- 翡翠綠軟墊池邊、粉彩球、金球亮框與取名彩紙。
+- 深海軍藍的遊戲主機介面，以青色能量光、金色金屬框、寶石色字球與 Jackpot 開獎卡建立大型遊戲抽獎機的層次。手機、iPad 直向／橫向會重新配置 HUD、控制台與收藏按鈕。
 - WebAudio 合成點擊、選球、能量音階、揭曉小號角／叮咚與五行慶祝音；低音量氛圍樂。
 - 首次主動互動才開啟音訊，音效／音樂獨立開關並記住設定。
 - 全螢幕切換；不支援的瀏覽器顯示 Safari「加入主畫面」提示。
@@ -69,14 +69,14 @@ Unicode 資料授權見 `UNICODE-LICENSE.txt`。three.js 保留原有 MIT 授權
 ## 驗證
 
 ```sh
-nodetests/namepool.cjs
+node tests/namepool.cjs
 # Playwright 僅供開發驗證，不是網站執行依賴：
 npm install --prefix /tmp/wubaobao-qa playwright
 node /tmp/wubaobao-qa/node_modules/playwright/cli.js install chromium webkit
-NODE_PATH=/tmp/wubaobao-qa/node_modules nodetests/browser.cjs
-NODE_PATH=/tmp/wubaobao-qa/node_modules ENGINE=webkit nodetests/browser.cjs
+NODE_PATH=/tmp/wubaobao-qa/node_modules node tests/browser.cjs
+NODE_PATH=/tmp/wubaobao-qa/node_modules ENGINE=webkit node tests/browser.cjs
 # 上線後同一套測試：
-NODE_PATH=/tmp/wubaobao-qa/node_modules nodetests/browser.cjs https://alastorid.github.io/wubaobao/
+NODE_PATH=/tmp/wubaobao-qa/node_modules node tests/browser.cjs https://alastorid.github.io/wubaobao/
 ```
 
 `?qa` 僅啟用唯讀狀態快照；測試以真實滑鼠輸入操作。音訊以分析器檢查輸出波形及

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#edf6f4" />
-  <title>吳 · 字球取名池</title>
+  <meta name="theme-color" content="#060a18" />
+  <title>吳氏天選 · 名字樂透</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -20,20 +20,26 @@
       <button id="fullscreenToggle" type="button" aria-label="進入全螢幕"><b aria-hidden="true">⛶</b><span>全螢幕</span></button>
     </nav>
     <div id="toast" role="status" class="hidden"></div>
-    <div id="intro"><span>給小小的你，一個美好的名字</span><h1>一池好字，<br>摸出你的名字。</h1><p>摸球選字 · 滑動撥球 · 滿格揭曉</p></div>
+    <div id="intro">
+      <span>WÚ BABY NAME LOTTO</span>
+      <h1>吳氏天選</h1>
+      <p><i></i> 字球混合中 · 摸球鎖定名字</p>
+    </div>
     <!-- 頂欄：標題 + 取名能量瓶 -->
     <header id="topbar">
       <div id="brand">
         <span class="surname-chip">吳</span>
-        <span id="brandText">字球取名池<small>一觸 · 一字 · 一份祝福</small></span>
+        <span id="brandText">名字樂透<small>LUCKY NAME ARENA</small></span>
       </div>
       <div id="energy" role="progressbar" aria-label="取名能量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="取名能量">
-        <div id="energyFill"><span id="energyLabel">0</span></div>
+        <span class="energy-title">DRAW ENERGY</span>
+        <div id="energyTrack"><div id="energyFill"></div></div>
+        <span id="energyLabel">0%</span>
       </div>
     </header>
 
     <!-- 中間：組合中的名字（吳 ＋ 收集到的字） -->
-    <div id="goldHint" role="status">✦ 金球祝福：多 25 能量，這個字必入名</div>
+    <div id="goldHint" role="status"><b>JACKPOT BALL</b> ✦ 金球 +25 能量，鎖定字必入名</div>
     <div id="workline">
       <span class="slot surname">吳</span>
       <span class="slot empty" id="slot1">?</span>
@@ -42,7 +48,7 @@
 
     <!-- 喜用神（父母可選想補的五行，也可自動） -->
     <div id="wxbar">
-      <span class="wx-label">喜用</span>
+      <span class="wx-label">五行增幅</span>
       <button type="button" class="wx-chip auto active" aria-pressed="true" data-w="auto">自動</button>
       <button type="button" class="wx-chip" aria-pressed="false" data-w="金">金</button>
       <button type="button" class="wx-chip" aria-pressed="false" data-w="木">木</button>
@@ -53,19 +59,19 @@
 
     <!-- 取名揭曉 -->
     <div id="reveal" class="hidden">
-      <div class="card"><div class="reveal-eyebrow">✧ 為你遇見的名字 ✧</div>
+      <div class="card"><div class="reveal-eyebrow">★ JACKPOT · 天選名字 ★</div>
         <div id="revealName" aria-live="polite"></div>
         <div id="revealTag"></div>
         <div id="revealMeaning" aria-label="筆畫與起名寓意"></div>
-        <div class="hint">再摸一摸，取下一個名字！</div>
+        <div class="hint">再來一局 · 下一個好名字正在球池裡</div>
       </div>
     </div>
 
     <!-- 底部：名字簿 -->
-    <button id="bookToggle" type="button">名字簿 <span id="bookCount">0</span></button>
+    <button id="bookToggle" type="button"><small>COLLECTION</small> 名字簿 <span id="bookCount">0</span></button>
     <section id="book" class="hidden"></section>
 
-    <div id="footerHint">摸到哪顆，就選哪個字。金球帶來額外祝福。</div>
+    <div id="footerHint"><b>HOW TO PLAY</b> 摸球選字 · 滑動混球 · 能量滿格開獎</div>
   </div>
 
   <script src="js/namepool.js"></script>

@@ -68,10 +68,15 @@ function charTexture(ch, color = '#7a2448') {
   cv.width = cv.height = 128;
   const g = cv.getContext('2d');
   g.clearRect(0, 0, 128, 128);
-  g.font = '600 85px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+  g.font = '700 85px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
+  g.lineWidth = 7;
+  g.strokeStyle = 'rgba(2,12,24,.48)';
+  g.strokeText(ch, 64, 70);
   g.fillStyle = color;
+  g.shadowColor = 'rgba(95,244,238,.42)';
+  g.shadowBlur = 8;
   g.fillText(ch, 64, 70);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -161,7 +166,7 @@ function updateParticles(dt) {
 }
 
 /* ─────────────── 字球池：正交俯視，不傾斜、不拉伸 ─────────────── */
-const PASTELS = [0x8cc9c2, 0xf2afa0, 0xa8c7df, 0xc7badc, 0xe9c8a2, 0xb8ce9c, 0xf0c3ce];
+const PASTELS = [0x29a6a8, 0xd55f58, 0x4385ba, 0x7159a4, 0xc28134, 0x68963e, 0xb54e78];
 const MAX_BALLS = 210;
 const balls = [];
 const sphereGeo = new THREE.SphereGeometry(1, 24, 16);
@@ -224,7 +229,7 @@ function nextEntry(gold) {
 }
 function refreshBall(b) {
   b.entry = nextEntry(b.gold);
-  b.label.material.map = charTexture(b.entry.c, '#284e50');
+  b.label.material.map = charTexture(b.entry.c, '#f3ffff');
   b.label.material.needsUpdate = true;
   b.refreshAt = 0;
 }
