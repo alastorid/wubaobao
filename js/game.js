@@ -1,8 +1,8 @@
-// wubaobao · 泡泡取名機
+// wubaobao · 字球取名池
 // 玩法（邏輯簡單，看一眼就懂，連嬰兒亂摸都能玩）：
-//   1. 摸一下 / 滑一下，畫面就會冒出一團氣泡，能量澆進頂上的「取名能量瓶」。
-//   2. 點中泡泡、或滑動掃過泡泡，就把那個好字「收集」到中間的名字行。
-//   3. 能量滿了，中央水晶迸發，生出一組「吳 ＋ 一字或兩字」的名字，
+//   1. 摸一下 / 滑一下，字球會滾動並選中，能量澆進頂上的「取名能量瓶」。
+//   2. 摸到球、或滑動掃過球，就把那個好字「收集」到中間的名字行。
+//   3. 能量滿了，球池綻放彩紙，生出一組「吳 ＋ 一字或兩字」的名字，
 //      名字的五行會標出來；父母若設了「喜用神」，系統會優先補那個五行。
 //   4. 取下一個名字，就自動記進底下的「名字簿」（存於本機）。
 // 任何輸入都算數：嬰兒亂敲、亂滑，能量照樣累積，一定會取名。
@@ -16,8 +16,7 @@ const WU = '吳';
 const ENERGY_MAX = 100;
 const TAP_ENERGY = 10;        // 每一下
 const SWIPE_ENERGY = 0.18;    // 每移動 1px
-const POP_ENERGY = 4;         // 收集一個字額外 +4
-const BUBBLE_COUNT = innerWidth < 600 ? 28 : 36;
+
 
 const CAT_LABEL = { xiangxing: '象形', xingsheng: '形聲', huiyi: '會意', zhishi: '指事', jingfang: '經方' };
 
@@ -51,15 +50,15 @@ renderer.setClearColor(0x000000, 0);
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0.4, 16);
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 100);
+camera.position.set(0, 0, 40);
 camera.lookAt(0, 0, 0);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.95));
+scene.add(new THREE.AmbientLight(0xffffff, 2.2));
 const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
 dirLight.position.set(5, 9, 7);
 scene.add(dirLight);
-scene.add(new THREE.PointLight(0xff9ac2, 1.2, 30).translateZ(6));
+scene.add(new THREE.PointLight(0xd5eee2, .5, 30).translateZ(6));
 
 /* ─────────────── 工具：文字貼圖 ─────────────── */
 const charTexCache = new Map();
@@ -161,118 +160,195 @@ function updateParticles(dt) {
   P.geo.attributes.color.needsUpdate = true;
 }
 
-/* ─────────────── 泡泡 ─────────────── */
-const PASTELS = [0xffb3c9, 0xffd1b8, 0xbfe3ff, 0xc9f2d6, 0xffe08a, 0xe6ccff, 0xffc3d8, 0xb8f0e8];
-const bubbles = [];
-// 共用高光貼圖與金邊；避免昂貴的環境反射／後製。
-const sheenCanvas = document.createElement('canvas');
-sheenCanvas.width = sheenCanvas.height = 128;
-const sg = sheenCanvas.getContext('2d');
-const gradient = sg.createRadialGradient(64, 64, 40, 64, 64, 63);
-gradient.addColorStop(0, '#ffffff00'); gradient.addColorStop(.8, '#ffffff16'); gradient.addColorStop(1, '#ffffffc0');
-sg.fillStyle = gradient; sg.beginPath(); sg.arc(64, 64, 63, 0, Math.PI * 2); sg.fill();
-sg.strokeStyle = '#ffffffdd'; sg.lineWidth = 5; sg.lineCap = 'round';
-sg.beginPath(); sg.arc(64, 64, 50, 3.7, 4.6); sg.stroke();
-sg.fillStyle = '#fff9'; sg.beginPath(); sg.ellipse(86, 93, 10, 4, -.5, 0, Math.PI * 2); sg.fill();
-const bubbleSheen = new THREE.CanvasTexture(sheenCanvas);
-const rimGeo = new THREE.TorusGeometry(1.025, .015, 4, 36);
-const sphereGeo = new THREE.SphereGeometry(1, 20, 14);
+/* ─────────────── 字球池：正交俯視，不傾斜、不拉伸 ─────────────── */
+const PASTELS = [0x8cc9c2, 0xf2afa0, 0xa8c7df, 0xc7badc, 0xe9c8a2, 0xb8ce9c, 0xf0c3ce];
+const MAX_BALLS = 210;
+const balls = [];
+const sphereGeo = new THREE.SphereGeometry(1, 24, 16);
+// 球體與陰影批次繪製，iPad 不必逐球增加材質與繪製成本。
+const ballMesh = new THREE.InstancedMesh(sphereGeo, new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 95, specular: 0xeeeecc }), MAX_BALLS);
+ballMesh.frustumCulled = false;
+scene.add(ballMesh);
+const shadowCanvas = document.createElement('canvas'); shadowCanvas.width = shadowCanvas.height = 64;
+const shadowContext = shadowCanvas.getContext('2d');
+const shadowGradient = shadowContext.createRadialGradient(32, 32, 4, 32, 32, 32);
+shadowGradient.addColorStop(0, '#254b4a55'); shadowGradient.addColorStop(1, '#254b4a00');
+shadowContext.fillStyle = shadowGradient; shadowContext.fillRect(0, 0, 64, 64);
+const shadowMap = new THREE.CanvasTexture(shadowCanvas);
+const shadows = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowMap, transparent: true, depthWrite: false }), MAX_BALLS);
+shadows.frustumCulled = false; scene.add(shadows);
+const rings = new THREE.InstancedMesh(new THREE.TorusGeometry(1, .045, 6, 40), new THREE.MeshBasicMaterial({ color: 0xffe8a0 }), MAX_BALLS);
+rings.frustumCulled = false; scene.add(rings);
+const transform = new THREE.Object3D();
+let pitWidth = 1, pitHeight = 1;
+let goldChoice = null;
+const goldHint = document.getElementById('goldHint');
+const GOLD_BONUS = 25;
 
-function makeBubble(pos, radius) {
-  const entry = pickChar({ beautyOnly: Math.random() < .65 });
-  const mat = new THREE.MeshPhongMaterial({
-    color: PASTELS[(Math.random() * PASTELS.length) | 0],
-    shininess: 150, specular: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false
+/* ─────────────── 隱形循環氣流 ─────────────── */
+// 爆光與衝擊圈共用固定資源，反覆摸也不建立無限物件。
+const shockwaves = [];
+const waveGeometry = new THREE.RingGeometry(.93, 1, 48);
+for (let i = 0; i < 6; i++) {
+  const mesh = new THREE.Mesh(waveGeometry, new THREE.MeshBasicMaterial({ color: 0xffdb77, transparent: true, depthWrite: false }));
+  mesh.visible = false; scene.add(mesh); shockwaves.push({ mesh, life: 0, gold: false });
+}
+let waveIndex = 0;
+function explodeAt(x, y, gold) {
+  const pos = new THREE.Vector3(x, y, 4);
+  spawnBurst(pos, gold ? 90 : 16, gold ? 0xffca49 : 0xffffff, gold ? 5 : 1.8, -1.2);
+  const wave = shockwaves[waveIndex++ % shockwaves.length];
+  wave.life = 1; wave.gold = gold; wave.mesh.position.copy(pos); wave.mesh.visible = !reducedMotion;
+  if (reducedMotion) return;
+  for (const b of balls) {
+    const dx = b.x - x, dy = b.y - y, d = Math.hypot(dx, dy);
+    const reach = gold ? 3.5 : 1.2;
+    if (d > .01 && d < reach) {
+      const force = (gold ? 4.5 : 1.2) * (1 - d / reach);
+      b.vx += dx / d * force; b.vy += dy / d * force;
+    }
+  }
+}
+function updateWaves(dt) {
+  for (const wave of shockwaves) {
+    wave.life = Math.max(0, wave.life - dt * 2);
+    wave.mesh.visible = wave.life > 0 && !reducedMotion;
+    wave.mesh.material.opacity = wave.life * .75;
+    wave.mesh.scale.setScalar(.2 + (1 - wave.life) * (wave.gold ? 3.2 : 1));
+  }
+}
+
+function nextEntry(gold) {
+  const want = gold && target !== 'auto' ? target : null;
+  return pickChar({ beautyOnly: true, maxStrokes: gold ? 8 : (Math.random() < .45 ? 8 : 99), want }) || pickChar({ want });
+}
+function refreshBall(b) {
+  b.entry = nextEntry(b.gold);
+  b.label.material.map = charTexture(b.entry.c, '#284e50');
+  b.label.material.needsUpdate = true;
+  b.refreshAt = 0;
+}
+function layoutPool() {
+  const width = stage.clientWidth, height = stage.clientHeight;
+  renderer.setSize(width, height);
+  pitWidth = width / 100; pitHeight = height / 100;
+  camera.left = -pitWidth / 2; camera.right = pitWidth / 2;
+  camera.top = pitHeight / 2; camera.bottom = -pitHeight / 2;
+  camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  // 按可用空間鋪滿，保留圓形球與足夠手指點選面積。
+  const cell = Math.max(48, Math.sqrt(width * height / 105));
+  const columns = Math.max(3, Math.floor((width - 12) / cell));
+  const rows = Math.max(2, Math.floor((height - 12) / (cell * .9)));
+  const baseCount = Math.min(100, columns * rows);
+  const middleCount = Math.floor(baseCount * .72);
+  const topCount = Math.floor(baseCount * .42);
+  const count = Math.min(MAX_BALLS, baseCount + middleCount + topCount);
+  const spacingX = (pitWidth - .16) / columns;
+  const spacingY = (pitHeight - .16) / rows;
+  const radius = Math.min(spacingX * .47, spacingY * .52, .65);
+  while (balls.length > count) { const b = balls.pop(); scene.remove(b.label); b.label.material.dispose(); }
+  while (balls.length < count) {
+    const i = balls.length;
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
+    scene.add(label);
+    const b = { id: i, label, layer: 0, depth: 0, gold: i % 17 === 7, x: 0, y: 0, vx: 0, vy: 0, radius, selected: 0, cooldown: 0, refreshAt: 0 };
+    balls.push(b); refreshBall(b);
+  }
+  balls.forEach((b, i) => {
+    b.layer = i < baseCount ? 0 : i < baseCount + middleCount ? 1 : 2;
+    b.depth = b.layer * radius * 1.55;
+    const local = i < baseCount ? i : i < baseCount + middleCount ? i - baseCount : i - baseCount - middleCount;
+    const row = Math.floor(local / columns), column = local % columns;
+    b.radius = radius * (.88 + (i % 6) * .035);
+    if (b.layer === 0) {
+      b.x = -pitWidth / 2 + .08 + spacingX * (column + .5 + (Math.random() - .5) * .28);
+      b.y = pitHeight / 2 - .08 - spacingY * (row + .5 + (Math.random() - .5) * .2);
+    } else {
+      // 上層錯開鋪在下層之上，畫面保留遮擋與真實 Z 深度。
+      b.x = -pitWidth / 2 + spacingX * (column + .85);
+      b.y = -pitHeight / 2 + spacingY * (row + .95 + b.layer * .35);
+    }
+    b.vx = (Math.random() - .5) * .12; b.vy = 0;
+    ballMesh.setColorAt(i, new THREE.Color(b.gold ? 0xeebd49 : PASTELS[i % PASTELS.length]).multiplyScalar(.82 + b.layer * .09));
   });
-  const mesh = new THREE.Mesh(sphereGeo, mat);
-  mesh.scale.setScalar(radius);
-  const elColor = (WU_XING[entry.w] || {}).color || '#7a2448';
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: charTexture(entry.c, elColor), transparent: true, depthWrite: false
-  }));
-  sprite.scale.setScalar(1.12);
-  sprite.position.z = .9;
-  mesh.add(sprite);
-  const sheen = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleSheen, transparent: true, depthWrite: false, opacity: .8 }));
-  sheen.scale.setScalar(2.13);
-  sheen.position.z = .12;
-  mesh.add(sheen);
-  const rim = new THREE.Mesh(rimGeo, new THREE.MeshBasicMaterial({ color: 0xd7b56b, transparent: true, opacity: .55, depthWrite: false }));
-  rim.visible = !!entry.b;
-  mesh.add(rim);
-  mesh.position.copy(pos);
-  scene.add(mesh);
-  const b = {
-    mesh, radius, vy: 0.35 + Math.random() * 0.6, vx: (Math.random() - 0.5) * 0.3,
-    phase: Math.random() * Math.PI * 2, sway: 0.4 + Math.random() * 0.8,
-    entry, alive: true
-  };
-  mesh.userData = b;
-  bubbles.push(b);
-  return b;
+  ballMesh.count = shadows.count = rings.count = count;
+  ballMesh.instanceColor.needsUpdate = true;
+  updatePool(0);
 }
-
-function respawn(b) {
-  const entry = pickChar({ beautyOnly: Math.random() < .65 });
-  b.entry = entry;
-  const elColor = (WU_XING[entry.w] || {}).color || '#7a2448';
-  b.mesh.children[0].material.map = charTexture(entry.c, elColor);
-  b.mesh.children[0].material.needsUpdate = true;
-  b.mesh.children[2].visible = !!entry.b;
-  b.mesh.material.color.setHex(PASTELS[(Math.random() * PASTELS.length) | 0]);
-  b.mesh.position.set(
-    bubbleX(),
-    -5.5 - Math.random() * 1.4,
-    (Math.random() - 0.5) * 4 - 1
-  );
-  b.vy = 0.35 + Math.random() * 0.6;
-  b.vx = (Math.random() - 0.5) * 0.3;
-  b.phase = Math.random() * Math.PI * 2;
-  b.alive = true;
-}
-
-function popBubble(b) {
-  if (!b.alive) return;
-  b.alive = false;
-  sound.play('pop');
-  stats.pops++;
-  const wpos = new THREE.Vector3();
-  b.mesh.getWorldPosition(wpos);
-  spawnBurst(wpos, 26, 0xfff4d6, 3.2);
-  // 收集好字
-  if (caught.length < 2) {
-    caught.push(b.entry);
-    renderSlots();
+function selectBall(b) {
+  if (b.cooldown > 0) return;
+  b.cooldown = .8; b.selected = 1; b.refreshAt = 1.1;
+  stats.selections++;
+  explodeAt(b.x, b.y, b.gold);
+  sound.play(b.gold ? 'celebrate' : 'pop');
+  if (b.gold) {
+    goldChoice = b.entry;
+    stats.goldSelections++;
+    const other = caught.find(e => e.c !== b.entry.c);
+    caught.splice(0, caught.length, b.entry, ...(other ? [other] : []));
+    goldHint.textContent = `✦ 已鎖定「${b.entry.c}」 · 能量 +${GOLD_BONUS}`;
+  } else if (!caught.some(e => e.c === b.entry.c)) {
+    if (caught.length < 2) caught.push(b.entry);
+    else if (goldChoice) caught[1] = b.entry;
+    else { caught.shift(); caught.push(b.entry); }
   }
-  addEnergy(POP_ENERGY);
-  respawn(b);
+  renderSlots();
+  // 先收字再灌能量，剛好滿格的這一摸也會參與取名。
+  if (b.gold) addEnergy(GOLD_BONUS);
+  b.vy += reducedMotion ? 0 : .8;
 }
-
-function updateBubbles(dt, t) {
-  for (const b of bubbles) {
-    b.mesh.position.y += b.vy * dt;
-    b.mesh.position.x += b.vx * dt + Math.sin(t * 1.2 + b.phase) * b.sway * dt;
-    if (b.mesh.position.y > 6.5) respawn(b);
+function updatePool(dt) {
+  const liftOriginY = -pitHeight / 2 + .73;
+  for (const b of balls) {
+    b.cooldown = Math.max(0, b.cooldown - dt); b.selected = Math.max(0, b.selected - dt * 1.8);
+    if (b.refreshAt > 0) { b.refreshAt -= dt; if (b.refreshAt <= 0) refreshBall(b); }
+    b.vy -= dt * .75;
+    const damping = Math.exp(-dt * 2.2); b.vx *= damping; b.vy *= damping;
+    // 中央上升、兩側回落，形成樂透機式循環氣流。
+    const aboveLift = b.y - liftOriginY;
+    const cone = .7 + Math.max(0, aboveLift) * .24;
+    if (!reducedMotion && aboveLift > 0 && aboveLift < pitHeight * .88 && Math.abs(b.x) < cone) {
+      const focus = 1 - Math.abs(b.x) / cone;
+      b.vy += dt * (6.2 + 5.8 * focus);
+      b.vx += dt * (Math.sin(b.y * 2.3 + b.id) * .8 + Math.sign(b.x || 1) * .35);
+    }
+    b.vx = Math.max(-5, Math.min(5, b.vx)); b.vy = Math.max(-5, Math.min(5, b.vy));
+    b.x += b.vx * dt; b.y += b.vy * dt;
   }
+  // 同層球碰撞，多層球在不同 Z 高度遮疊；爆開可露出下面的球。
+  for (let pass = 0; pass < 5; pass++) {
+    for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) {
+      const a = balls[i], b = balls[j];
+      if (a.layer !== b.layer) continue;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const min = a.radius + b.radius + .035, d2 = dx * dx + dy * dy;
+      if (d2 >= min * min) continue;
+      const d = Math.sqrt(d2) || .001, nx = d2 ? dx / d : 1, ny = d2 ? dy / d : 0;
+      const overlap = (min - d) * .5;
+      a.x -= nx * overlap; a.y -= ny * overlap; b.x += nx * overlap; b.y += ny * overlap;
+      const speed = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+      if (speed < 0) { const impulse = -speed * .6; a.vx -= nx * impulse; a.vy -= ny * impulse; b.vx += nx * impulse; b.vy += ny * impulse; }
+    }
+    for (const b of balls) {
+      const maxX = pitWidth / 2 - b.radius - .04, maxY = pitHeight / 2 - b.radius - .04;
+      if (Math.abs(b.x) > maxX) { b.x = Math.sign(b.x) * maxX; b.vx *= -.4; }
+      if (Math.abs(b.y) > maxY) { b.y = Math.sign(b.y) * maxY; b.vy *= -.3; }
+    }
+  }
+  balls.forEach((b, i) => {
+    const r = b.radius;
+    transform.position.set(b.x, b.y, b.depth); transform.rotation.set(0, 0, 0); transform.scale.setScalar(r); transform.updateMatrix(); ballMesh.setMatrixAt(i, transform.matrix);
+    transform.position.set(b.x + .07, b.y - .10, b.depth - .03); transform.scale.set(r * 2.7, r * 2.7, 1); transform.updateMatrix(); shadows.setMatrixAt(i, transform.matrix);
+    b.label.position.set(b.x, b.y, b.depth + r + .02); b.label.scale.setScalar(r * 1.08);
+    transform.position.set(b.x, b.y, b.depth + r + .01); transform.scale.setScalar(b.gold || b.selected > 0 ? r * 1.04 : 0); transform.updateMatrix(); rings.setMatrixAt(i, transform.matrix);
+  });
+  ballMesh.instanceMatrix.needsUpdate = shadows.instanceMatrix.needsUpdate = rings.instanceMatrix.needsUpdate = true;
 }
-
-/* ─────────────── 中央水晶（取名之泉） ─────────────── */
-const crystalMat = new THREE.MeshPhysicalMaterial({
-  color: 0xb7dfd2, emissive: 0x70b9a0, emissiveIntensity: 0.35, flatShading: true,
-  transparent: true, opacity: 0.85, roughness: 0.2, metalness: 0.25, clearcoat: 1
-});
-const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.25, 0).scale(1, 1.45, 1), crystalMat);
-crystal.position.set(0, 0.2, -2.5);
-crystal.scale.setScalar(1);
-scene.add(crystal);
-const crystalEdges = new THREE.LineSegments(new THREE.EdgesGeometry(crystal.geometry), new THREE.LineBasicMaterial({ color: 0xf9e9b9, transparent: true, opacity: .65 }));
-crystal.add(crystalEdges);
-crystal.userData.base = 1;
 
 /* ─────────────── 遊戲狀態 ─────────────── */
 let energy = 0;
 let target = 'auto';          // 喜用神：auto / 金木水火土
-const stats = { pops: 0, reveals: 0 };
+const stats = { selections: 0, goldSelections: 0, reveals: 0 };
 const caught = [];            // 本輪收集的字
 let names = [];               // 名字簿（新→舊）
 let hideTimer = null;
@@ -282,7 +358,6 @@ function addEnergy(v) {
   const before = Math.floor(energy / 20);
   energy += v;
   if (Math.floor(energy / 20) > before) sound.play('rise', Math.min(energy / ENERGY_MAX, 1));
-  crystal.userData.base = 1 + (energy / ENERGY_MAX) * 0.6;
   updateEnergyUI();
   while (energy >= ENERGY_MAX) generateName();
 }
@@ -300,7 +375,8 @@ function generateName() {
   sound.play('reveal');
   if (target !== 'auto') sound.play('celebrate');
   const want = target === 'auto' ? null : target;
-  const given = pickGivenName({ want, count: null, preferred: caught });
+  const preferred = goldChoice ? [goldChoice, ...caught.filter(e => e.c !== goldChoice.c)] : caught;
+  const given = pickGivenName({ want, count: null, preferred });
 
   // 組名：吳 ＋ 1~2 字
   const chars = given.chars.map(e => e.c);
@@ -320,16 +396,14 @@ function generateName() {
   revealTag.innerHTML = `五行 ${wxIcons} ${wxLabels} &nbsp;·&nbsp; ${typeTags}${srcTag}<br><span style="font-size:13px;color:#839578">${pinyin}</span>`;
   revealMeaning.textContent = metas.map(m => `${m.c} · ${m.s}畫${m.meaning ? ' · ' + m.meaning : ''}`).join('\n');
   revealEl.classList.remove('hidden');
-  // 水晶迸發 + 繽紛彩紙
-  const cpos = new THREE.Vector3(); crystal.getWorldPosition(cpos);
+  // 球池中央綻放繽紛彩紙
+  const cpos = new THREE.Vector3(0, 0, 2);
   const confetti = [0xff5c8d, 0xffd23f, 0x3ac7ff, 0x7ed957, 0xb25cff, 0xff9ac2];
   for (let i = 0; i < 6; i++) spawnBurst(cpos, 65, confetti[(Math.random() * confetti.length) | 0], 6, -2.5);
 
   celebration = 1;
+  explodeAt(0, 0, true);
   launchConfetti();
-  stage.classList.remove('celebrating');
-  void stage.offsetWidth;
-  stage.classList.add('celebrating');
 
   // 記錄
   names.unshift({ name: full, chars, pinyin, wx: given.elements, tags: typeTags, srcTag, ts: Date.now() });
@@ -339,9 +413,10 @@ function generateName() {
 
   // 收尾：重置能量與收集行
   energy = Math.max(0, energy - ENERGY_MAX);
-  crystal.userData.base = 1 + energy / ENERGY_MAX * .6;
   updateEnergyUI();
   caught.length = 0;
+  goldChoice = null;
+  goldHint.textContent = '✦ 金球祝福：多 25 能量，這個字必入名';
   renderSlots();
 
   clearTimeout(hideTimer);
@@ -351,6 +426,7 @@ function generateName() {
 }
 
 function renderSlots() {
+  slot1.classList.toggle('gold-slot', !!goldChoice);
   slot1.textContent = caught[0] ? caught[0].c : '?';
   slot2.textContent = caught[1] ? caught[1].c : '?';
   slot1.classList.toggle('filled', !!caught[0]);
@@ -413,45 +489,56 @@ function screenBurst(e, count, color) {
   raycaster.setFromCamera(ndc, camera);
   const pos = new THREE.Vector3();
   raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), pos);
+  pos.z = 4;
   spawnBurst(pos, count, color, 2.6);
 }
-function hitBubbleAt(e) {
-  const ndc = toNDC(e);
-  raycaster.setFromCamera(ndc, camera);
-  const hits = raycaster.intersectObjects(bubbles.map(b => b.mesh), true);
-  if (!hits.length) return;
-  const bob = bubbles.find(x => x.mesh === hits[0].object || x.mesh === hits[0].object.parent);
-  if (bob) popBubble(bob);
+function pointerWorld(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  return { x: ((e.clientX - r.left) / r.width - .5) * pitWidth, y: (.5 - (e.clientY - r.top) / r.height) * pitHeight };
 }
-function swipePop(e, previous) {
-  // 用螢幕上的線段掃描：稀疏的 pointermove 也不會跳過泡泡。
-  const dx = e.clientX - previous.x, dy = e.clientY - previous.y;
-  const length2 = dx * dx + dy * dy;
-  for (const b of bubbles) {
-    const projected = b.mesh.position.clone().project(camera);
-    const x = (projected.x + 1) * innerWidth / 2;
-    const y = (1 - projected.y) * innerHeight / 2;
-    const u = length2 ? Math.max(0, Math.min(1, ((x - previous.x) * dx + (y - previous.y) * dy) / length2)) : 0;
-    const radius = b.radius * innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(27.5)) * (camera.position.z - b.mesh.position.z));
-    if (Math.hypot(x - previous.x - u * dx, y - previous.y - u * dy) < radius + 10) popBubble(b);
+function visibleBallAt(p) {
+  // 找實際最靠近鏡頭的球面，而非先找到的底層圓形。
+  let front = null, frontZ = -Infinity;
+  for (const b of balls) {
+    const d2 = (b.x - p.x) ** 2 + (b.y - p.y) ** 2;
+    if (d2 > b.radius ** 2) continue;
+    const z = b.depth + Math.sqrt(b.radius ** 2 - d2);
+    if (z > frontZ) { front = b; frontZ = z; }
   }
-  screenBurst(e, 4, 0xdac37e);
+  return front;
+}
+function hitBallAt(e) {
+  const b = visibleBallAt(pointerWorld(e));
+  if (b) selectBall(b);
+}
+function swipeSelect(e, previous) {
+  const p = pointerWorld(e), a = pointerWorld({ clientX: previous.x, clientY: previous.y });
+  const dx = p.x - a.x, dy = p.y - a.y;
+  const steps = Math.min(80, Math.max(1, Math.ceil(Math.hypot(dx, dy) / .15)));
+  const selected = new Set();
+  for (let i = 0; i <= steps; i++) {
+    const b = visibleBallAt({ x: a.x + dx * i / steps, y: a.y + dy * i / steps });
+    if (!b || selected.has(b.id)) continue;
+    selected.add(b.id); selectBall(b);
+    if (!reducedMotion) { b.vx += Math.max(-1.5, Math.min(1.5, dx * 3)); b.vy += Math.max(-1.5, Math.min(1.5, dy * 3)); }
+  }
 }
 
 renderer.domElement.style.touchAction = 'none';
-renderer.domElement.addEventListener('pointerdown', (e) => {
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button, #book')) return;
   sound.play('tap');
-  if (activePointer !== null) { addEnergy(TAP_ENERGY); hitBubbleAt(e); return; }
+  if (activePointer !== null) { hitBallAt(e); addEnergy(TAP_ENERGY); return; }
   renderer.domElement.setPointerCapture(e.pointerId);
   activePointer = e.pointerId;
   startPt = { x: e.clientX, y: e.clientY };
   prevPt = startPt;
 
   screenBurst(e, 12, 0xa5d5c4);
+  hitBallAt(e);
   addEnergy(TAP_ENERGY);
-  hitBubbleAt(e);
 });
-renderer.domElement.addEventListener('pointermove', (e) => {
+document.addEventListener('pointermove', (e) => {
   if (e.pointerId !== activePointer) return;
   const dx = e.clientX - startPt.x, dy = e.clientY - startPt.y;
   const seg = Math.hypot(e.clientX - prevPt.x, e.clientY - prevPt.y);
@@ -459,7 +546,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   const previous = prevPt;
   prevPt = { x: e.clientX, y: e.clientY };
   if (Math.hypot(dx, dy) > 14) {       // 滑動開始
-    swipePop(e, previous);
+    swipeSelect(e, previous);
     addEnergy(seg * SWIPE_ENERGY);
   }
 });
@@ -468,9 +555,9 @@ function endPointer(e) {
   activePointer = null;
   startPt = prevPt = null;
 }
-renderer.domElement.addEventListener('pointerup', endPointer);
-renderer.domElement.addEventListener('pointercancel', endPointer);
-renderer.domElement.addEventListener('pointerleave', (e) => { if (e.pointerId === activePointer) endPointer(e); });
+document.addEventListener('pointerup', endPointer);
+document.addEventListener('pointercancel', endPointer);
+renderer.domElement.addEventListener('lostpointercapture', endPointer);
 
 // 避免 iOS 捲動／縮放
 document.addEventListener('touchmove', (e) => { if (!e.target.closest('#book')) e.preventDefault(); }, { passive: false });
@@ -481,6 +568,9 @@ wxbar.addEventListener('click', (e) => {
   const chip = e.target.closest('.wx-chip');
   if (!chip) return;
   target = chip.dataset.w;
+  goldChoice = null; caught.length = 0; renderSlots();
+  goldHint.textContent = '✦ 金球祝福：多 25 能量，這個字必入名';
+  for (const b of balls) if (b.gold) refreshBall(b);
   wxbar.querySelectorAll('.wx-chip').forEach(c => { c.classList.toggle('active', c === chip); c.setAttribute('aria-pressed', String(c === chip)); });
   sound.play('rise', .5);
 });
@@ -490,13 +580,10 @@ bookToggle.addEventListener('click', () => bookEl.classList.toggle('hidden'));
 
 
 /* ─────────────── 視窗尺寸 ─────────────── */
-function onResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  for (const b of bubbles) b.mesh.position.x = bubbleX();
-}
+function onResize() { layoutPool(); }
 window.addEventListener('resize', onResize);
+// 以球池元素的實際尺寸為準，涵蓋 iPad 工具列、安全區與橫直轉向。
+new ResizeObserver(onResize).observe(stage);
 
 /* ─────────────── 有上限的星塵與彩紙（共三次繪製） ─────────────── */
 let celebration = 0;
@@ -506,8 +593,8 @@ for (let i = 0; i < dustPositions.length; i++) dustPositions[i] = (Math.random()
 dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
 const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0xc4a570, size: .035, transparent: true, opacity: .5, depthWrite: false }));
 scene.add(dust);
-const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleSheen, color: 0xffdd8a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-halo.position.copy(crystal.position); scene.add(halo);
+const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: shadowMap, color: 0xffdd8a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+halo.position.set(0, 0, 1); scene.add(halo);
 const CONFETTI_COUNT = 100;
 const confettiMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(.10, .19), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, depthWrite: false }), CONFETTI_COUNT);
 confettiMesh.frustumCulled = false;
@@ -519,7 +606,7 @@ let confettiTime = 0;
 function launchConfetti() {
   confettiTime = reducedMotion ? 0 : 3.6;
   confettiState.forEach((c, i) => {
-    c.p.copy(crystal.position);
+    c.p.set(0, 0, 2);
     const angle = Math.random() * Math.PI * 2;
     c.v.set(Math.cos(angle) * (2 + Math.random() * 4), 3 + Math.random() * 5, 2 + Math.random() * 3);
     c.spin = Math.random() * 6;
@@ -574,53 +661,30 @@ document.addEventListener('keydown', e => {
 });
 // 只在測試網址提供唯讀快照，測試仍須走真實輸入事件。
 if (new URLSearchParams(location.search).has('qa')) {
-  window.wubaobaoQA = () => ({ energy, names: names.length, pops: stats.pops, reveals: stats.reveals,
+  window.wubaobaoQA = () => ({ energy, names: names.length, selections: stats.selections, goldSelections: stats.goldSelections, goldChoice: goldChoice?.c, reveals: stats.reveals,
     caught: caught.map(e => e.c), audio: sound.ctx?.state, sound: { ...sound.settings },
     gains: sound.ctx ? [sound.effects.gain.value, sound.music.gain.value] : [],
     voices: sound.voices, particles: P.active, drawCalls: renderer.info.render.calls,
     textures: renderer.info.memory.textures, pixelRatio: renderer.getPixelRatio(),
-    bubbles: bubbles.map(b => { const p = b.mesh.position.clone().project(camera); return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2, c: b.entry.c }; }) });
+    maxOverlap: (() => { let overlap = 0; for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) { const a = balls[i], b = balls[j]; if (a.layer !== b.layer) continue; overlap = Math.max(overlap, a.radius + b.radius - Math.hypot(a.x - b.x, a.y - b.y)); } return overlap * 100; })(),
+    waves: shockwaves.filter(w => w.life > 0).length,
+    balls: balls.map(b => { const r = renderer.domElement.getBoundingClientRect(); return { id: b.id, x: r.left + (b.x / pitWidth + .5) * r.width, y: r.top + (.5 - b.y / pitHeight) * r.height, radius: b.radius * r.width / pitWidth, c: b.entry.c, gold: b.gold, w: b.entry.w, layer: b.layer, visible: visibleBallAt({ x: b.x, y: b.y }) === b }; }) });
 }
 
 /* ─────────────── 主迴圈 ─────────────── */
 const clock = new THREE.Clock();
-function visibleWidth() { return Math.min(28, 16 * camera.aspect); }
-function bubbleX() { return innerWidth > 900 ? -2.5 + Math.random() * 12 : (Math.random() - .5) * visibleWidth(); }
-
-initParticles();
-loadNames();
-renderBook();
-renderSlots();
-// 隨機撒第一波泡泡
-for (let i = 0; i < BUBBLE_COUNT; i++) {
-  makeBubble(
-    new THREE.Vector3(bubbleX(), (Math.random() - 0.5) * 11, (Math.random() - 0.5) * 4 - 1),
-    0.38 + Math.random() * 0.34
-  );
-}
+initParticles(); loadNames(); renderBook(); renderSlots(); layoutPool();
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
-  updateBubbles(dt, t);
+  updatePool(dt);
+  updateWaves(dt);
   updateCelebration(dt, t);
-  if (!reducedMotion) {
-    camera.position.x = Math.sin(t * .12) * .07;
-    camera.position.y = .4 + Math.sin(t * .17) * .045;
-    dust.rotation.z = Math.sin(t * .08) * .035;
-  }
   updateParticles(dt);
 
-  // 水晶呼吸 + 能量脈動
-  const pulse = reducedMotion ? 1 : 1 + Math.sin(t * 2.2) * 0.06;
-  crystal.scale.setScalar((crystal.userData.base + celebration * .9) * pulse);
-  crystal.rotation.y += dt * 0.4;
-  crystal.rotation.x = Math.sin(t * 0.5) * 0.15;
-  crystalMat.emissiveIntensity = 0.35 + (energy / ENERGY_MAX) * 1.3 + celebration * 2;
-
-  crystalMat.color.setHSL(.42 - Math.min(energy / ENERGY_MAX, 1) * .28, .32, .72);
   renderer.render(scene, camera);
 }
 animate();

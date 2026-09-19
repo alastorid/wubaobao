@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#edf6f4" />
-  <title>吳 · 泡泡取名機</title>
+  <title>吳 · 字球取名池</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -20,12 +20,12 @@
       <button id="fullscreenToggle" type="button" aria-label="進入全螢幕"><b aria-hidden="true">⛶</b><span>全螢幕</span></button>
     </nav>
     <div id="toast" role="status" class="hidden"></div>
-    <div id="intro"><span>給小小的你，一個美好的名字</span><h1>好名字，<br>在泡泡裡相遇。</h1><p>輕觸收集 · 滑動探索 · 滿格揭曉</p></div>
+    <div id="intro"><span>給小小的你，一個美好的名字</span><h1>一池好字，<br>摸出你的名字。</h1><p>摸球選字 · 滑動撥球 · 滿格揭曉</p></div>
     <!-- 頂欄：標題 + 取名能量瓶 -->
     <header id="topbar">
       <div id="brand">
         <span class="surname-chip">吳</span>
-        <span id="brandText">泡泡取名機<small>一觸 · 一字 · 一份祝福</small></span>
+        <span id="brandText">字球取名池<small>一觸 · 一字 · 一份祝福</small></span>
       </div>
       <div id="energy" role="progressbar" aria-label="取名能量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="取名能量">
         <div id="energyFill"><span id="energyLabel">0</span></div>
@@ -33,6 +33,7 @@
     </header>
 
     <!-- 中間：組合中的名字（吳 ＋ 收集到的字） -->
+    <div id="goldHint" role="status">✦ 金球祝福：多 25 能量，這個字必入名</div>
     <div id="workline">
       <span class="slot surname">吳</span>
       <span class="slot empty" id="slot1">?</span>
@@ -64,7 +65,7 @@
     <button id="bookToggle" type="button">名字簿 <span id="bookCount">0</span></button>
     <section id="book" class="hidden"></section>
 
-    <div id="footerHint">每一次小小的觸碰，都離好名字更近一點。</div>
+    <div id="footerHint">摸到哪顆，就選哪個字。金球帶來額外祝福。</div>
   </div>
 
   <script src="js/namepool.js"></script>

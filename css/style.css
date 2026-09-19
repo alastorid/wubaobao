@@ -64,8 +64,6 @@ button:active { transform: scale(.94); }
 #bookClear { margin-top: 16px; width: 100%; padding: 12px; border-radius: 14px; border: 1px solid #ccd9c8; background: transparent; font-size: 12px; }
 #footerHint { position: absolute; left: max(28px, env(safe-area-inset-left)); bottom: max(40px, calc(env(safe-area-inset-bottom) + 12px)); color: #8a9c8f; font-size: 11px; letter-spacing: .06em; }
 #toast { z-index: 10; position: absolute; top: 85px; right: 24px; width: min(340px, calc(100vw - 48px)); padding: 18px; border-radius: 18px; background: #365952; color: white; font-size: 13px; line-height: 1.7; box-shadow: 0 8px 25px #36595230; }
-#stage.celebrating { animation: celebrate .55s ease-out; }
-@keyframes celebrate { 0% { transform: scale(1); } 18% { transform: scale(1.025) rotate(.2deg); } 45% { transform: scale(1.01) rotate(-.2deg); } 100% { transform: scale(1); } }
 @media (max-width: 900px) {
   #intro { top: 205px; left: 28px; }
   #intro h1 { font-size: 28px; }
@@ -100,3 +98,26 @@ button:active { transform: scale(.94); }
   .card { padding: 20px; width: 370px; } #revealName { font-size: 60px; margin: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+
+/* 字球池：畫布與正交鏡頭共享同一個矩形，橫直向都保持正圓。 */
+#stage { top: max(218px, calc(env(safe-area-inset-top) + 194px)); bottom: max(174px, calc(env(safe-area-inset-bottom) + 150px)); left: max(34px, env(safe-area-inset-left)); right: max(34px, env(safe-area-inset-right)); border: 14px solid #8eb9af; border-radius: 44px; background: #d9e9dd; box-shadow: inset 0 5px 18px #36595228, 0 12px 0 #629789, 0 22px 36px #375c4820; overflow: hidden; }
+#intro { top: max(106px, calc(env(safe-area-inset-top) + 82px)); left: 40px; }
+#intro > span { display: none; }
+#intro h1 { font-size: 25px; line-height: 1.4; margin: 0 0 8px; }
+#intro p { font-size: 10px; letter-spacing: .06em; }
+#workline { top: max(115px, calc(env(safe-area-inset-top) + 91px)); }
+#goldHint { position: absolute; right: 40px; top: max(122px, calc(env(safe-area-inset-top) + 98px)); width: 214px; padding: 12px 15px; border: 1px solid #ddbb61; border-radius: 16px; background: #fff4d6; color: #8a671f; font-size: 12px; line-height: 1.8; }
+.slot.gold-slot { background: #f8dc8c; color: #75541a; border-color: #d2a540; }
+@media (max-width: 760px) {
+  #intro { display: none; }
+  #goldHint { top: max(184px, calc(env(safe-area-inset-top) + 160px)); left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 6px 14px; font-size: 11px; }
+  #stage { top: max(235px, calc(env(safe-area-inset-top) + 211px)); bottom: max(163px, calc(env(safe-area-inset-bottom) + 139px)); left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); border-width: 9px; border-radius: 28px; }
+}
+@media (max-height: 550px) and (min-width: 761px) {
+  #intro { display: none; }
+  #workline { top: max(83px, env(safe-area-inset-top)); }
+  #goldHint { top: 84px; width: 220px; padding: 6px 12px; }
+  #stage { top: 148px; bottom: 97px; border-width: 9px; border-radius: 28px; }
+  #wxbar { bottom: 18px; padding: 4px 10px; }
+  #footerHint { display: none; }
+}

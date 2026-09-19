@@ -49,11 +49,11 @@ const out = process.env.QA_OUTPUT || '/tmp/wubaobao-qa';
   await page.waitForTimeout(4750);
   assert(await page.locator('#reveal').evaluate(e=>e.classList.contains('hidden')));
   const before=await qa();
-  const bubble=before.bubbles.find(b=>b.y>260&&b.y<650&&b.x>120&&b.x<1200);
-  assert(bubble);
-  await page.mouse.move(bubble.x-45,bubble.y); await page.mouse.down();
-  await page.mouse.move(bubble.x+45,bubble.y,{steps:4});await page.mouse.up();
-  const after=await qa(); assert(after.pops>before.pops); assert(after.caught.length>0); assert(after.energy>before.energy);
+  const ball=before.balls.find(b=>b.visible && b.y>260&&b.y<650&&b.x>120&&b.x<1200);
+  assert(ball);
+  await page.mouse.move(ball.x-45,ball.y); await page.mouse.down();
+  await page.mouse.move(ball.x+45,ball.y,{steps:4});await page.mouse.up();
+  const after=await qa(); assert(after.selections>before.selections); assert(after.caught.length>0); assert(after.energy>before.energy);
   for (const w of ['金','木','水','火','土']) {
     await page.locator(`[data-w="${w}"]`).click();
     const n=(await qa()).names;

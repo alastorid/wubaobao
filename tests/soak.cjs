@@ -17,5 +17,5 @@ const assert = require('node:assert/strict');
  while(Date.now()<until){await page.touchscreen.tap(60+Math.random()*700,300+Math.random()*480);taps++;await page.waitForTimeout(250)}
  const timing=await frames;
  const q=await page.evaluate(()=>wubaobaoQA());assert(q.names>0);assert(q.particles<=700);assert(q.textures<=517);assert.deepEqual(errors,[]);
- console.log(JSON.stringify({engine:'WebKit',viewport:'820×1180 @2x',durationMs:duration,taps,timing,names:q.names,pops:q.pops,particles:q.particles,textures:q.textures,pixelRatio:q.pixelRatio,errors},null,2));await browser.close();
+ console.log(JSON.stringify({engine:'WebKit',viewport:'820×1180 @2x',durationMs:duration,taps,timing,names:q.names,selections:q.selections,particles:q.particles,textures:q.textures,pixelRatio:q.pixelRatio,errors},null,2));await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
