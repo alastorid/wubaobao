@@ -12,8 +12,9 @@
 //   古本道德經    → 依六爻定章，得老子八十一章的章句
 //   古本抱樸子    → 依六爻定篇，得葛洪內篇的篇旨
 //   古本詩經      → 依六爻定篇，得風雅頌的名句
+//   古本楚辭      → 依六爻定篇，得離騷九歌的名句
 
-import { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX, SHANHAI, BENCAO, DAODEJING, BAOPUZI, SHIJING } from './classics.js';
+import { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX, SHANHAI, BENCAO, DAODEJING, BAOPUZI, SHIJING, CHUJI } from './classics.js';
 import { pickChar } from './namepool.js';
 
 export const LINE_COUNT = 6;
@@ -95,6 +96,21 @@ export function resolveCasting(book, lines) {
       wx: '木',
       lines: [
         { k: '出處', v: `詩經 · ${poem.part} · ${poem.title}` },
+        { k: '篇名', v: poem.title },
+        { k: '經文', v: poem.text },
+      ],
+    };
+  }
+
+  if (book === 'chuji') {
+    const poem = CHUJI[parseInt(bits, 2) % CHUJI.length];
+    return {
+      kind: 'chuji',
+      seal: '騷',
+      title: `${poem.part}·${poem.title}`,
+      wx: '木',
+      lines: [
+        { k: '出處', v: `楚辭 · ${poem.part} · ${poem.title}` },
         { k: '篇名', v: poem.title },
         { k: '經文', v: poem.text },
       ],

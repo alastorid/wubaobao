@@ -347,6 +347,22 @@ export const SHIJING = Object.freeze([
   { part: '豳風', title: '七月', text: '春日載陽，有鳴倉庚。女執懿筐，歲彼維常。' },
 ]);
 
+// ── 楚辭 ──────────────────────────────────────────────
+// 屈原、宋玉。以《離騷》《九歌》為主。取字集中在香草與美人，
+// 這是八部古本裡最偏詩意、也最貼合女名的一部。經文照通行本。
+export const CHUJI = Object.freeze([
+  { part: '離騷', title: '滋蘭', text: '余既滋蘭之九畹兮，又樹蕙之百畹。冀枝葉之峻茂兮，願俟時乎吾將刈。' },
+  { part: '離騷', title: '扈芷', text: '扈江離與辟芷兮，紉秋蘭以為佩。' },
+  { part: '離騷', title: '雜糅', text: '芳與澤其雜糅兮，唯昭質其猶未虧。' },
+  { part: '離騷', title: '椒桂', text: '雜申椒與菌桂兮，豈維紉夫蕙茝。' },
+  { part: '離騷', title: '制衣', text: '制芰荷以為衣兮，集芙蓉以為裳。' },
+  { part: '離騷', title: '懷質', text: '懷質抱情，無顏亦將娭。' },
+  { part: '離騷', title: '路漫', text: '路漫漫其修遠兮，吾將上下而求索。' },
+  { part: '九歌', title: '湘夫人', text: '沅有茝兮澧有蘭，思公子兮未敢言。' },
+  { part: '九歌', title: '東皇太一', text: '九嶷縹兮並迎，靈之來兮如雲。' },
+  { part: '九歌', title: '雲中君', text: '龍駕兮帝服，聊翱遊兮周章。靈連蜷兮既留，烂昭昭兮未央。' },
+  { part: '九歌', title: '山鬼', text: '若有人兮山之阿，被薜荔兮帶女蘿。' },
+]);
 
 export const SOURCES = Object.freeze([
   {
@@ -403,7 +419,15 @@ export const SOURCES = Object.freeze([
     seal: '詩',
     era: '西周',
     wx: '木',
-    blurb: '風雅頌三體。取字於采葛采薇、灼灼其華、巧笑倩兮 —— 七部裡最偏詩意的一部。',
+    blurb: '風雅頌三體。取字於采葛采薇、灼灼其華、巧笑倩兮 —— 最偏詩意的一部。',
+  },
+  {
+    id: 'chuji',
+    name: '古本楚辭',
+    seal: '騷',
+    era: '戰國',
+    wx: '木',
+    blurb: '離騷九歌，香草美人。取字於滋蘭九畹、扈江離與辟芷 —— 最貼合女名的一部。',
   },
 ]);
 
@@ -416,6 +440,6 @@ if (typeof module !== 'undefined') {
     TRIGRAMS, HEXAGRAMS, HEXAGRAM_BY_LINES,
     ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX,
     SHANHAI, SHANHAI_SECTIONS, BENCAO, BENCAO_CHAR_HINT,
-    DAODEJING, BAOPUZI, SHIJING, SOURCES, SOURCE_BY_ID,
+    DAODEJING, BAOPUZI, SHIJING, CHUJI, SOURCES, SOURCE_BY_ID,
   };
 }

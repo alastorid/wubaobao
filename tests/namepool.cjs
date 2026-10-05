@@ -1,4 +1,4 @@
-// 資料層測試：古本四部、字庫五行與禁用字、七三取名比例。
+// 資料層測試：古本八部、字庫五行與禁用字、七三取名比例。
 const assert = require('node:assert/strict');
 const {
   CHARACTERS, WU_XING, ELEMENTS, RATIO, BANNED, BANNED_EXACT, BANNED_LOOKALIKE,
@@ -6,8 +6,8 @@ const {
 } = require('../js/namepool.js');
 const {
   HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, SHANHAI, BENCAO,
-  DAODEJING, BAOPUZI, SOURCES,
-} = require('../js/classics.js');
+  DAODEJING, BAOPUZI, SHIJING, CHUJI, SOURCES,
+} = require('./classics.cjs');
 
 // 古本清單由 SOURCES 推導，日後增刪古本不必再改測試
 const BOOKS = SOURCES.map((s) => s.id);
@@ -135,6 +135,31 @@ for (const b of BAOPUZI) {
   assert(b.text && b.text.length > 4, `抱樸子 ${b.title} 缺篇旨`);
   assert.equal(findBanned(b.title + b.text).length, 0, `抱樸子 ${b.title} 含禁用字`);
 }
+
+// 詩經與楚辭：篇目齊全，篇名不重複，經文有禁用字者一律不收
+for (const [label, list] of [['詩經', SHIJING], ['楚辭', CHUJI]]) {
+  const titles = list.map((p) => p.title);
+  assert.equal(new Set(titles).size, titles.length, `${label}篇名不得重複`);
+  assert(list.length >= 10, `${label} 收錄過少：${list.length}`);
+  for (const p of list) {
+    assert(p.part && p.title && p.text, `${label} 資料不完整`);
+    assert(p.text.length > 4, `${label} ${p.title} 經文過短`);
+    for (const c of findBanned(p.title + p.part)) {
+      assert(VERBATIM.has(c), `${label} ${p.title} 篇名含禁用字 ${c}`);
+    }
+    for (const c of findBanned(p.text)) {
+      assert(VERBATIM.has(c), `${label} ${p.title} 經文含禁用字 ${c}`);
+    }
+  }
+}
+// 楚辭與詩經是最貼合女名的兩部，必須真的有女名用字
+const byChar = (c) => CHARACTERS.find((e) => e.c === c);
+for (const c of '姝倩灼采佩靜楚葛蕙芳蘭')
+  assert(byChar(c), `${c} 應在字庫（詩經／楚辭用字）`);
+assert(
+  CHARACTERS.some((e) => e.book === 'chuji' && e.w === '火'),
+  '楚辭應有火行用字',
+);
 
 // ── 取名：指定喜用神時，每字都必須是該行 ──────────────
 for (const want of ELEMENTS) {
