@@ -277,7 +277,57 @@ export const BENCAO_CHAR_HINT = Object.freeze({
   木香: ['香'],
 });
 
-// ── 書目資料（介面用） ──────────────────────────────────
+// ── 道德經 ──────────────────────────────────────────────
+// 老子道德經共八十一章，這裡收錄適合取名的一章名句。
+// 章名採後世注家常用的標題，經文照通行本，標點為本站所加。
+export const DAODEJING = Object.freeze([
+  { ch: 1, title: '常名', text: '道可道，非常道；名可名，非常名。' },
+  { ch: 2, title: '美惡', text: '天下皆知美之為美，斯惡已。' },
+  { ch: 5, title: '守中', text: '多言數窮，不如守中。' },
+  { ch: 6, title: '谷神', text: '谷神不死，是謂玄牝。玄牝之門，是謂天地根。' },
+  { ch: 8, title: '上善', text: '上善若水，水善利萬物而不爭。' },
+  { ch: 16, title: '守靜', text: '致虛極，守靜篤。萬物並作，吾以觀復。' },
+  { ch: 19, title: '抱樸', text: '見素抱樸，少私寡欲。' },
+  { ch: 22, title: '不爭', text: '夫唯不爭，故無尤。' },
+  { ch: 25, title: '混成', text: '有物混成，先天地生。寂兮寥兮，吾獨與之為類。' },
+  { ch: 29, title: '神器', text: '天下神器，不可為也，不可執也。' },
+  { ch: 33, title: '知足', text: '知足者富；強行者有志。' },
+  { ch: 34, title: '若海', text: '大道氾兮，其若四海。' },
+  { ch: 37, title: '無為', text: '道常無為而無不為。' },
+  { ch: 41, title: '上士', text: '上士聞道，勤而行之；中士聞道，若存若亡；下士聞道，大笑之。不笑不足以為道。' },
+  { ch: 42, title: '三生', text: '道生一，一生二，二生三，三生萬物。' },
+  { ch: 44, title: '名身', text: '名與身孰親？身與貨孰多？' },
+  { ch: 45, title: '大盈', text: '大盈若沖，其用不窮。' },
+  { ch: 48, title: '日損', text: '為學日益，為道日損。損之又損，以至於無為。' },
+  { ch: 49, title: '赤子', text: '含德之厚，比於赤子。毒蟲不螫，猛獸不據。' },
+  { ch: 51, title: '道生', text: '道生之，德畜之，物形之，勢成之。' },
+  { ch: 52, title: '守柔', text: '守柔曰雌，用剛為雄。' },
+  { ch: 54, title: '自修', text: '修之於身，其德乃真。' },
+  { ch: 61, title: '謙謙', text: '謙謙君子，卑以自牧也。' },
+  { ch: 62, title: '淺深', text: '善淺而深，萬物疏而理。' },
+  { ch: 64, title: '毫末', text: '合抱之木，生於毫末；九層之臺，起於累土。' },
+  { ch: 67, title: '三寶', text: '我有三寶，持而保之：一曰慈，二曰儉，三曰不敢為天下先。' },
+  { ch: 73, title: '天之道', text: '天之道，不爭而善勝。' },
+  { ch: 78, title: '柔弱', text: '天下莫柔弱於水。' },
+  { ch: 81, title: '信言', text: '信言不美，美言不信。' },
+]);
+
+// ── 抱樸子 ──────────────────────────────────────────────
+// 葛洪《抱樸子》分內篇、外篇。這裡收錄內篇幾個常見篇目，
+// 經文照通行本，取名用字以養生、金丹與德行三類為主。
+export const BAOPUZI = Object.freeze([
+  { part: '內篇', title: '極論', text: '論金丹、養生與返樸之道。' },
+  { part: '內篇', title: '勖學', text: '勉勵學道，講求日用之功。' },
+  { part: '內篇', title: '刺遲', text: '批刺遲滯不進之失。' },
+  { part: '內篇', title: '貴能', text: '崇尚實能，不尚空談。' },
+  { part: '內篇', title: '任能', text: '量才而任，各得其所。' },
+  { part: '內篇', title: '釋滯', text: '解釋疑滯，掃除積惑。' },
+  { part: '內篇', title: '寡欲', text: '清心寡欲，保養精氣。' },
+  { part: '內篇', title: '誠實', text: '誠實為本，不尚機心。' },
+  { part: '內篇', title: '忠臣', text: '論臣節，盡忠而不阿。' },
+]);
+
+
 export const SOURCES = Object.freeze([
   {
     id: 'yijing',
@@ -311,6 +361,22 @@ export const SOURCES = Object.freeze([
     wx: '木',
     blurb: '經方本草，草木百果。取字於藥材名，取其養生意象。',
   },
+  {
+    id: 'daodejing',
+    name: '古本道德經',
+    seal: '道',
+    era: '春秋',
+    wx: '火',
+    blurb: '老子八十一章，道法自然。取字於章句中的樸、儉、慈、赤子。',
+  },
+  {
+    id: 'baopuzi',
+    name: '古本抱樸子',
+    seal: '樸',
+    era: '晉',
+    wx: '木',
+    blurb: '葛洪內篇，金丹養生兼修德行。取字於煉、壽、誠、忠。',
+  },
 ]);
 
 export const SOURCE_BY_ID = Object.freeze(
@@ -322,6 +388,6 @@ if (typeof module !== 'undefined') {
     TRIGRAMS, HEXAGRAMS, HEXAGRAM_BY_LINES,
     ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX,
     SHANHAI, SHANHAI_SECTIONS, BENCAO, BENCAO_CHAR_HINT,
-    SOURCES, SOURCE_BY_ID,
+    DAODEJING, BAOPUZI, SOURCES, SOURCE_BY_ID,
   };
 }

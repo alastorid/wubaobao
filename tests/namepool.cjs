@@ -4,8 +4,13 @@ const {
   CHARACTERS, WU_XING, ELEMENTS, RATIO, BANNED, BANNED_EXACT, BANNED_LOOKALIKE,
   pickChar, pickGivenName, rollElement, sourceStats, findBanned,
 } = require('../js/namepool.js');
-const { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, SHANHAI, BENCAO, SOURCES } =
-  require('../js/classics.js');
+const {
+  HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, SHANHAI, BENCAO,
+  DAODEJING, BAOPUZI, SOURCES,
+} = require('../js/classics.js');
+
+// 古本清單由 SOURCES 推導，日後增刪古本不必再改測試
+const BOOKS = SOURCES.map((s) => s.id);
 
 // ── 五行：喜用神只有木、火 ──────────────────────────────
 assert.deepEqual(ELEMENTS, ['木', '火'], '喜用神只允許木、火');
@@ -56,18 +61,23 @@ for (const e of CHARACTERS) {
   assert(Number.isInteger(e.s) && e.s > 0 && e.s <= 24, `${e.c} 筆畫異常：${e.s}`);
   assert(e.cite && typeof e.cite === 'string', `${e.c} 缺出處`);
   assert(e.meaning && typeof e.meaning === 'string', `${e.c} 缺寓意`);
-  assert(['yijing', 'ziwei', 'shanhai', 'bencao'].includes(e.book), `${e.c} 出處古本不明`);
+  assert(BOOKS.includes(e.book), `${e.c} 出處古本不明：${e.book}`);
 }
 
-// ── 四部古本都有字，木火兩行都抽得到 ──────────────────
+// ── 每一部古本都有字，木火兩行都抽得到 ──────────────────
 const stats = sourceStats();
 for (const w of ELEMENTS) {
   assert(stats[w].total >= 40, `${w} 行字數不足：${stats[w].total}`);
-  for (const b of ['yijing', 'ziwei', 'shanhai', 'bencao']) {
+  for (const b of BOOKS) {
     assert(stats[w].books[b] > 0, `${w} 行在 ${b} 沒有字`);
   }
 }
-assert.equal(SOURCES.length, 4);
+assert.equal(new Set(SOURCES.map((s) => s.id)).size, SOURCES.length, '古本 id 不得重複');
+assert.equal(new Set(SOURCES.map((s) => s.seal)).size, SOURCES.length, '古本印文不得重複');
+for (const s of SOURCES) {
+  assert(s.name.startsWith('古本'), `${s.name} 應以「古本」開頭`);
+  assert(s.blurb && s.blurb.length > 10, `${s.name} 缺介紹`);
+}
 
 // ── 古本易經：六十四卦不重複、爻象自洽 ──────────────────
 assert.equal(HEXAGRAMS.length, 64);
@@ -88,7 +98,7 @@ assert.equal(HEXAGRAM_BY_LINES.get('101010').name, '既濟');
 assert.equal(HEXAGRAM_BY_LINES.get('010101').name, '未濟');
 assert.equal(HEXAGRAM_BY_LINES.size, 64, '六十四卦爻象必須互異');
 // 禁用字：原典逐字引用者（以／樂／語／宥）保留原文，其餘一律不得出現
-const VERBATIM = new Set(['以', '樂', '語', '宥']);
+const VERBATIM = VERBATIM_EXCEPTIONS;
 for (const h of HEXAGRAMS) {
   for (const c of findBanned(h.name + h.judgement + h.image)) {
     assert(VERBATIM.has(c), `${h.name} 經文含禁用字 ${c}`);
@@ -101,16 +111,38 @@ assert.equal(new Set(ZIWEI_STARS.map((s) => s.name)).size, 14);
 assert.equal(ZIWEI_PALACES.length, 12, '紫微斗數十二宮');
 assert.equal(new Set(ZIWEI_PALACES.map((s) => s.name)).size, 12);
 
-// ── 山海經 / 本草 ───────────────────────────────────────
+// ── 山海經 / 本草 / 道德經 / 抱樸子 ─────────────────────
 assert(SHANHAI.山.length > 0 && SHANHAI.海.length > 0 && SHANHAI.草木.length > 0);
 assert(BENCAO.length > 0);
 
+// 道德經：章號合法、不重複、經文齊全，且都在 1..81 之內
+const chapters = DAODEJING.map((d) => d.ch);
+assert.equal(new Set(chapters).size, chapters.length, '道德經章號不得重複');
+for (const d of DAODEJING) {
+  assert(d.ch >= 1 && d.ch <= 81, `道德經第${d.ch}章超出範圍`);
+  assert(d.title && d.text, `道德經第${d.ch}章缺章名或經文`);
+  assert.equal(findBanned(d.title).length, 0, `道德經第${d.ch}章章名含禁用字`);
+  for (const c of findBanned(d.text)) {
+    assert(VERBATIM.has(c), `道德經第${d.ch}章經文含禁用字 ${c}`);
+  }
+}
+
+// 抱樸子：篇目齊全
+const baoTitles = BAOPUZI.map((b) => b.title);
+assert.equal(new Set(baoTitles).size, baoTitles.length, '抱樸子篇名不得重複');
+for (const b of BAOPUZI) {
+  assert(['內篇', '外篇'].includes(b.part), `抱樸子篇別不明：${b.part}`);
+  assert(b.text && b.text.length > 4, `抱樸子 ${b.title} 缺篇旨`);
+  assert.equal(findBanned(b.title + b.text).length, 0, `抱樸子 ${b.title} 含禁用字`);
+}
+
 // ── 取名：指定喜用神時，每字都必須是該行 ──────────────
 for (const want of ELEMENTS) {
-  for (const book of ['yijing', 'ziwei', 'shanhai', 'bencao']) {
+  for (const book of BOOKS) {
     const n = pickGivenName({ want, count: 2, book });
-    assert.equal(n.chars.length, 2);
+    assert.equal(n.chars.length, 2, `${want}/${book} 抽不出兩個字`);
     assert(n.chars.every((e) => e.w === want), `${want}/${book} 抽到別行`);
+    assert.equal(new Set(n.chars.map((e) => e.c)).size, 2, `${want}/${book} 出現重字`);
   }
   // 筆畫不可能時仍要給得出名字
   const impossible = pickGivenName({ want, count: 2, minStrokes: 99, maxStrokes: 0 });
@@ -154,12 +186,7 @@ console.log(
     total: CHARACTERS.length,
     duplicates: 0,
     elements: Object.fromEntries(ELEMENTS.map((w) => [w, stats[w].total])),
-    perBook: Object.fromEntries(
-      ['yijing', 'ziwei', 'shanhai', 'bencao'].map((b) => [
-        b,
-        CHARACTERS.filter((e) => e.book === b).length,
-      ]),
-    ),
+    perBook: Object.fromEntries(BOOKS.map((b) => [b, CHARACTERS.filter((e) => e.book === b).length])),
     banned: BANNED.size,
     woodRatio: Number(ratio.toFixed(3)),
     nameCases: 20000,

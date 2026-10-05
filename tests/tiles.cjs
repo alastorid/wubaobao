@@ -110,15 +110,29 @@ const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c))
   await p.waitForTimeout(120);
   assert((await qa()).casts > pre.casts, '滑動應也能擲爻');
 
-  // 四部古本都能切換並成卦
-  for (const book of ['ziwei', 'shanhai', 'bencao']) {
+  // 每一部古本都能切換並成卦（清單由頁面上的分頁推導）
+  const books = await p.locator('#books .book-tab').evaluateAll((els) =>
+    els.map((e) => e.dataset.book),
+  );
+  assert(books.length >= 4, `古本分頁應有四部以上，實得 ${books.length}`);
+  for (const book of books) {
     await p.locator(`#books .book-tab[data-book="${book}"]`).click();
     assert.equal((await qa()).book, book);
     for (let i = 0; i < 6; i++) await cast();
     const t = await qa();
     assert(t.casting && t.casting.length > 0, `${book} 成卦後應顯示內容`);
     assert(t.panelTitle.length > 0, `${book} 應有經文標題`);
+    assert(
+      (await p.locator('#panelBody dd').count()) > 0,
+      `${book} 經文面板應有內容`,
+    );
   }
+  // 卦檯角落的硃砂印要跟著古本換
+  const seals = await p.locator('#books .book-tab').evaluateAll((els) =>
+    els.map((e) => e.querySelector('b').textContent),
+  );
+  const stageSeal = await p.locator('#stage').getAttribute('data-seal');
+  assert(seals.includes(stageSeal), `卦檯印文應是某一部古本，實得 ${stageSeal}`);
   await p.locator('#books .book-tab[data-book="yijing"]').click();
 
   // 喜用神：只能選木或火（或七三之序）
@@ -153,11 +167,78 @@ const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c))
   await p.waitForSelector('#book:not(.hidden)');
   const count = await p.locator('#bookList .book-item').count();
   assert(count > 0, '名錄應有資料');
+
+  // 複製列：名單有資料時才出現
+  await p.waitForSelector('#bookActions:not(.hidden)');
+  assert.equal(await p.locator('#bookActions .book-action').count(), 3, '應有三種複製格式');
+
+  // 三種格式都要寫進剪貼簿，且內容合理。
+  // WebKit 不支援 clipboard 權限授權，所以兩條路都攔下來：
+  // navigator.clipboard.writeText 與 document.execCommand('copy')。
+  // 這樣不管引擎走哪條 fallback，寫進去的內容都驗得到。
+  await p.evaluate(() => {
+    window.__clip = [];
+    const native = navigator.clipboard?.writeText?.bind(navigator.clipboard);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText = async (t) => {
+        window.__clip.push(t);
+        return native ? native(t) : undefined;
+      };
+    }
+    const exec = document.execCommand?.bind(document);
+    document.execCommand = (cmd, ...rest) => {
+      if (cmd === 'copy') {
+        const el = document.activeElement;
+        window.__clip.push(el && 'value' in el ? el.value : '');
+        return true;
+      }
+      return exec ? exec(cmd, ...rest) : false;
+    };
+  });
+  const clip = async (sel) => {
+    await p.locator(sel).click();
+    await p.waitForTimeout(250);
+    return p.evaluate(() => window.__clip.pop());
+  };
+  const clipNames = await clip('#copyNames');
+  const clipDetail = await clip('#copyDetail');
+  const clipAll = await clip('#copyAll');
+  for (const [label, text] of [['只複製名字', clipNames], ['含出處', clipDetail], ['全部', clipAll]]) {
+    assert(typeof text === 'string' && text.length > 0, `${label} 應寫入非空內容`);
+  }
+
+  const stored = await p.evaluate(() =>
+    JSON.parse(localStorage.getItem('wubaobao-names') || '[]').map((n) => n.name),
+  );
+  // 只複製名字：每行一個，順序與名錄一致
+  assert.deepEqual(clipNames.split('\n'), stored, '只複製名字應與名錄完全一致');
+  // 含出處：每個名字都要出現，且帶得出處與寓意
+  for (const n of stored) assert(clipDetail.includes(n), `含出處應包含 ${n}`);
+  assert(clipDetail.includes('畫'), '含出處應有筆畫');
+  assert(clipDetail.includes('古本'), '含出處應標明古本出處');
+  // 全部：序號與五行
+  assert(clipAll.includes('五行：'), '全部格式應有五行');
+  assert(/1\. 吳/.test(clipAll), '全部格式應有序號');
+  assert(clipAll.length >= clipDetail.length, '全部格式不該比含出處短');
+  console.log('  複製格式', { names: clipNames.length, detail: clipDetail.length, all: clipAll.length });
+
+  // 單筆複製
+  await p.locator('#bookList .book-copy').first().click();
+  await p.waitForTimeout(250);
+  const one = await p.evaluate(() => window.__clip.pop());
+  assert(one.startsWith(stored[0]), `單筆複製應是 ${stored[0]}，實得「${one.slice(0, 12)}」`);
+  assert(one.includes('畫'), '單筆複製應含筆畫');
+
   await p.locator('#bookList .book-delete').first().click();
   assert.equal(await p.locator('#bookList .book-item').count(), count - 1);
   await p.locator('#bookClear').click();
   assert.equal(await p.locator('#bookList .book-item').count(), 0);
   assert.equal((await qa()).names, 0);
+  // 名單清空後複製列要收起來，避免按了沒反應
+  assert(
+    await p.locator('#bookActions').evaluate((e) => e.classList.contains('hidden')),
+    '名單清空後複製列應隱藏',
+  );
   await p.locator('#bookClose').click();
   await p.waitForFunction(() => document.getElementById('book').classList.contains('hidden'));
 
@@ -285,6 +366,26 @@ const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c))
     true,
     `名字重複率過高：${allNames.length - new Set(allNames).size} 筆重複`,
   );
+
+  // 開著名錄時，揭曉卡不該蓋住名單
+  for (let i = 0; i < 3; i++) await cast();
+  await p.locator('#bookToggle').click();
+  await p.waitForSelector('#book:not(.hidden)');
+  const stacked = await p.evaluate(() => {
+    const b = document.getElementById('book').getBoundingClientRect();
+    const r = document.getElementById('reveal').getBoundingClientRect();
+    // 取名錄中第一列的中心點，看它是不是被揭曉卡蓋住
+    const row = document.querySelector('#bookList .book-item');
+    const hit = row ? document.elementFromPoint(
+      (row.getBoundingClientRect().left + row.getBoundingClientRect().right) / 2,
+      (row.getBoundingClientRect().top + row.getBoundingClientRect().bottom) / 2,
+    ) : null;
+    return { revealZ: getComputedStyle(document.getElementById('reveal')).zIndex, hitInsideRow: !!hit?.closest('#bookList') };
+  });
+  assert(Number(stacked.revealZ) < 60, `開名錄時揭曉卡應退到後面，z-index 實得 ${stacked.revealZ}`);
+  assert(stacked.hitInsideRow, '開名錄時名單應該點得到，不被揭曉卡蓋住');
+  await p.locator('#bookClose').click();
+  await p.waitForFunction(() => document.getElementById('book').classList.contains('hidden'));
 
   // 頁面文案不得殘留禁用字。
   // 例外：以／樂／語／宥 只可能出現在「原典逐字引用」裡（大象傳的「君子以…」

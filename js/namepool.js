@@ -198,6 +198,36 @@ const POOL = [
 蔘, shēn, 13, 本經·人參, 人參大補
 `),
 
+  // ── 古本道德經 · 木 ──────────────────────────────────
+  ...rows('daodejing', '木', `
+中, zhōng, 4, 道德經·五章, 守中不偏
+若, ruò, 8, 道德經·八章, 上善若水
+美, měi, 9, 道德經·二章, 美善有光
+儉, jiǎn, 15, 道德經·六十七章, 儉約自持
+樸, pǔ, 16, 道德經·十九章, 抱樸返真
+`),
+
+  // ── 古本道德經 · 火 ──────────────────────────────────
+  ...rows('daodejing', '火', `
+赤, chì, 7, 道德經·四十九章, 含德比於赤子
+抱, bào, 8, 道德經·十九章, 見素抱樸
+富, fù, 12, 道德經·三十三章, 知足者富
+敦, dūn, 12, 道德經·五十六章, 敦兮其若朴
+慈, cí, 13, 道德經·六十七章, 一曰慈
+`),
+
+  // ── 古本抱樸子 · 木 ──────────────────────────────────
+  ...rows('baopuzi', '木', `
+誠, chéng, 13, 抱樸子·內篇·誠實, 誠實為本
+`),
+
+  // ── 古本抱樸子 · 火 ──────────────────────────────────
+  ...rows('baopuzi', '火', `
+忠, zhōng, 8, 抱樸子·內篇·忠臣, 盡忠不阿
+煉, liàn, 13, 抱樸子·內篇·極論, 煉養延年
+壽, shòu, 14, 抱樸子·內篇·極論, 養生致壽
+`),
+
   // ── 古本易經 · 火 ──────────────────────────────────
   ...rows('yijing', '火', `
 天, tiān, 4, 乾·彌傳, 胸懷高遠
@@ -304,16 +334,16 @@ export const CHARACTERS = Object.freeze(CLEAN);
 export const CHAR_BY_CODE = new Map(CHARACTERS.map((e) => [e.c, e]));
 
 // ── 統計 ────────────────────────────────────────────────
+// 古本清單由實際字庫推導，日後增刪古本不必改這裡
+export const BOOKS = Object.freeze([...new Set(CHARACTERS.map((e) => e.book))]);
+
 export const sourceStats = () => {
   const by = {};
   for (const w of ELEMENTS) {
     by[w] = {
       total: CHARACTERS.filter((e) => e.w === w).length,
       books: Object.fromEntries(
-        Object.keys({ yijing: 1, ziwei: 1, shanhai: 1, bencao: 1 }).map((b) => [
-          b,
-          CHARACTERS.filter((e) => e.w === w && e.book === b).length,
-        ]),
+        BOOKS.map((b) => [b, CHARACTERS.filter((e) => e.w === w && e.book === b).length]),
       ),
     };
   }
@@ -384,8 +414,14 @@ export function pickGivenName({ want = null, count = null, minStrokes = 1, maxSt
   let guard = 0;
   while (chosen.length < len && guard++ < 40) {
     const target = want && WU_XING[want] ? want : rollElement(want);
-    const pool = candidates({ want: target, book, minStrokes, maxStrokes }).filter((e) => !seen.has(e.c));
-    const entry = weightedPick(pool, strokeWeight);
+    // 先從指定古本抽；該古本這一行不夠湊兩個字時，放寬到全庫該行。
+    // 抱樸子這類古本可用的字少，但名字絕不能因此抽不出來。
+    let pool = candidates({ want: target, book, minStrokes, maxStrokes }).filter((e) => !seen.has(e.c));
+    let entry = weightedPick(pool, strokeWeight);
+    if (!entry) {
+      pool = candidates({ want: target, minStrokes, maxStrokes }).filter((e) => !seen.has(e.c));
+      entry = weightedPick(pool, strokeWeight);
+    }
     if (!entry) break;
     push(entry);
   }
@@ -404,7 +440,7 @@ export function findBanned(text) {
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    CHARACTERS, WU_XING, ELEMENTS, RATIO, BANNED, BANNED_EXACT, BANNED_LOOKALIKE,
+    CHARACTERS, BOOKS, WU_XING, ELEMENTS, RATIO, BANNED, BANNED_EXACT, BANNED_LOOKALIKE,
     pickChar, pickGivenName, rollElement, sourceStats, findBanned,
   };
 }

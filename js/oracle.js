@@ -9,8 +9,10 @@
 //   古本紫微斗數  → 排命盤，得命宮主星與四化
 //   古本山海經    → 擲山海，得山川草木與祥禽異獸
 //   古本神農本草  → 開藥櫃，得經方本草之材
+//   古本道德經    → 依六爻定章，得老子八十一章的章句
+//   古本抱樸子    → 依六爻定篇，得葛洪內篇的篇旨
 
-import { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX, SHANHAI, BENCAO } from './classics.js';
+import { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX, SHANHAI, BENCAO, DAODEJING, BAOPUZI } from './classics.js';
 import { pickChar } from './namepool.js';
 
 export const LINE_COUNT = 6;
@@ -79,6 +81,39 @@ export function resolveCasting(book, lines) {
         { k: '篇目', v: `山海經 · ${section}` },
         { k: '所載', v: entry.name },
         { k: '原文意', v: entry.note },
+      ],
+    };
+  }
+
+  if (book === 'daodejing') {
+    // 六爻直接定章：同一副卦得同一章，與易經一致
+    const bits = lines.map((y) => (y ? '1' : '0')).join('');
+    const chapter = DAODEJING[parseInt(bits, 2) % DAODEJING.length];
+    return {
+      kind: 'daodejing',
+      seal: '道',
+      title: `第${chapter.ch}章　${chapter.title}`,
+      wx: '火',
+      lines: [
+        { k: '出處', v: `道德經 · 第${chapter.ch}章` },
+        { k: '章名', v: chapter.title },
+        { k: '經文', v: chapter.text },
+      ],
+    };
+  }
+
+  if (book === 'baopuzi') {
+    const bits = lines.map((y) => (y ? '1' : '0')).join('');
+    const item = BAOPUZI[parseInt(bits, 2) % BAOPUZI.length];
+    return {
+      kind: 'baopuzi',
+      seal: '樸',
+      title: `${item.part}　${item.title}`,
+      wx: '木',
+      lines: [
+        { k: '出處', v: `抱樸子 · ${item.part} · ${item.title}` },
+        { k: '篇旨', v: item.text },
+        { k: '作者', v: '葛洪　晉' },
       ],
     };
   }

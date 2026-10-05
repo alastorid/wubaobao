@@ -275,7 +275,90 @@ function renderBooks() {
   $('stage').dataset.seal = SOURCE_BY_ID[book].seal;
 }
 
-// ── 名字簿 ──────────────────────────────────────────────
+// ── 複製名錄 ────────────────────────────────────────────
+// 三種格式：只複製名字、複製含出處、複製全部。
+// 主要用途是把名單貼給老師或命理師，讓人從中挑出更有 context 的名字。
+// 單一名字的完整說明，逐字列出典據與寓意
+function oneNameDetail(n) {
+  const head = `${n.name}　${n.pinyin || ''}　${(n.wx || []).join(' · ')}`;
+  const chars = n.chars
+    .map((c, i) => `${c}（${(n.strokes || [])[i] ?? '?'}畫・${(n.cites || [])[i] || ''}・${(n.meanings || [])[i] || ''}）`)
+    .join(' ');
+  const tail = n.casting ? `成卦：${n.casting}` : '';
+  return [head, `　${chars}`, tail].filter(Boolean).join('\n');
+}
+
+const COPY_MODES = {
+  // 只給名字，一行一個，方便直接貼出去問
+  names: () => names.map((n) => n.name).join('\n'),
+  // 名字 + 逐字出處，讓人知道每個字的典據
+  detail: () => names.map(oneNameDetail).join('\n\n'),
+  // 全部欄位，給需要完整脈絡的人
+  all: () =>
+    names
+      .map((n, i) => {
+        const lines = [
+          `${i + 1}. ${n.name}　${n.pinyin || ''}`,
+          `　五行：${(n.wx || []).join(' · ')}`,
+        ];
+        if (n.casting) lines.push(`　成卦：${n.casting}`);
+        if (n.strokes?.length) lines.push(`　筆畫：${n.strokes.join(' · ')}`);
+        (n.cites || []).forEach((cite, k) => {
+          lines.push(`　${n.chars[k]}：${cite}　${(n.meanings || [])[k] || ''}`);
+        });
+        return lines.join('\n');
+      })
+      .join('\n\n'),
+};
+
+// 貼上剪貼簿。navigator.clipboard 需要安全內容，
+// 萬一不可用就退回舊的 execCommand 寫法（iPad Safari 較常遇到）。
+async function copyText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  try {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.append(area);
+    area.select();
+    area.setSelectionRange(0, area.value.length);
+    const ok = document.execCommand('copy');
+    area.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+async function copyMode(mode) {
+  if (!names.length) return;
+  const text = COPY_MODES[mode]();
+  const ok = await copyText(text);
+  const label = { names: '名字', detail: '含出處', all: '全部' }[mode];
+  if (ok) {
+    toast(`已複製 ${names.length} 個${label}到剪貼簿`);
+    sound.play('rise', 0.6);
+  } else {
+    toast('這個瀏覽器不允許自動複製，請手動選取');
+  }
+}
+
+// 標題與副標跟著古本數量走，日後增刪不必改文案
+function renderSourceTitles() {
+  const count = SOURCES.length;
+  $('booksTitle').textContent = `古本${'一二三四五六七八九十'[count - 1] || count}部`;
+  $('brandSub').textContent = SOURCES.map((s) =>
+    s.name.replace('古本', '').replace('神農本草', '本草'),
+  ).join(' · ');
+}
+
+// ── 名錄 ────────────────────────────────────────────────
 function saveNames() {
   try {
     localStorage.setItem('wubaobao-names', JSON.stringify(names));
@@ -296,6 +379,8 @@ function loadNames() {
 }
 function renderBook() {
   $('bookCount').textContent = names.length;
+  // 沒有名單時不顯示複製列
+  $('bookActions').classList.toggle('hidden', !names.length);
   const host = $('bookList');
   host.replaceChildren();
   if (!names.length) {
@@ -330,7 +415,17 @@ function renderBook() {
       saveNames();
       renderBook();
     };
-    row.append(name, meta, del);
+    // 單筆複製，給已經心儀某一個名字時用
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'book-copy';
+    copy.textContent = '複製';
+    copy.ariaLabel = '複製' + n.name;
+    copy.onclick = async () => {
+      const ok = await copyText(oneNameDetail(n));
+      toast(ok ? `已複製 ${n.name} 及其出處` : '這個瀏覽器不允許自動複製，請手動選取');
+    };
+    row.append(name, meta, copy, del);
     host.append(row);
   });
   const clear = document.createElement('button');
@@ -355,6 +450,9 @@ function toast(text) {
 
 // ── 事件 ────────────────────────────────────────────────
 $('castButton').onclick = () => cast();
+$('copyNames').onclick = () => copyMode('names');
+$('copyDetail').onclick = () => copyMode('detail');
+$('copyAll').onclick = () => copyMode('all');
 $('bookToggle').onclick = () => $('book').classList.toggle('hidden');
 $('bookClose').onclick = () => $('book').classList.add('hidden');
 $('book').addEventListener('click', (e) => {
@@ -425,6 +523,7 @@ function renderPoolNote() {
     `${CHARACTERS.length} 個古本取名用字 · 木 ${s.木.total} 字（火 ${s.火.total} 字） · 七三之序取名`;
 }
 renderBooks();
+renderSourceTitles();
 renderHexagram();
 renderProgress();
 renderSlots();

@@ -27,7 +27,7 @@
           <span class="brand-seal" aria-hidden="true">吳</span>
           <span class="brand-text">
             <b>古本取名</b>
-            <small>卜筮 · 星曜 · 山海 · 本草</small>
+            <small id="brandSub">卜筮 · 星曜 · 山海 · 本草 · 道樸</small>
           </span>
         </div>
         <nav id="tools" aria-label="設定">
@@ -50,7 +50,7 @@
 
       <aside class="rail rail-left">
         <section class="panel">
-          <h2 class="panel-title">古本四部</h2>
+          <h2 class="panel-title" id="booksTitle">古本</h2>
           <div id="books" class="book-tabs" role="group" aria-label="選擇古本"></div>
           <p id="bookBlurb" class="panel-note"></p>
         </section>
@@ -149,6 +149,11 @@
         <button class="close" id="bookClose" type="button" aria-label="關閉名錄">×</button>
         <h2>名錄</h2>
         <p>每一次成卦，都留一個名字。</p>
+        <div id="bookActions" class="book-actions hidden">
+          <button id="copyAll" type="button" class="book-action">複製全部</button>
+          <button id="copyNames" type="button" class="book-action">只複製名字</button>
+          <button id="copyDetail" type="button" class="book-action">複製含出處</button>
+        </div>
         <div id="bookList"></div>
       </div>
     </section>
