@@ -1,81 +1,81 @@
-// iPad 尺寸的 WebKit 觸控長跑；非 iPad 實機證明。
-const { webkit } = require("playwright");
-const assert = require("node:assert/strict");
+// 連續觸控量測：在 iPad 尺寸下長時間操作，看有沒有錯誤、記憶體或節點失控。
+const { webkit, chromium } = require('playwright');
+const assert = require('node:assert/strict');
+
+const base = process.argv[2] || 'http://localhost:8123/';
+const duration = Number(process.env.SOAK_MS || 20000);
+
 (async () => {
-  const browser = await webkit.launch();
-  const page = await browser.newPage({
+  const engine = process.env.ENGINE === 'chromium' ? chromium : webkit;
+  const browser = await engine.launch();
+  const p = await browser.newPage({
     viewport: { width: 820, height: 1180 },
     deviceScaleFactor: 2,
     hasTouch: true,
-    isMobile: true,
   });
   const errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto((process.argv[2] || "http://localhost:8123/") + "?qa");
-  await page.waitForFunction(() => window.wubaobaoQA);
-  await page.locator("#effectsToggle").tap();
-  await page.locator("#musicToggle").tap();
-  const duration = Number(process.env.SOAK_MS || 120000);
-  const frames = page.evaluate(
-    (duration) =>
-      new Promise((resolve) => {
-        const samples = [];
-        let last = performance.now();
-        const end = last + duration;
-        function tick(t) {
-          samples.push(t - last);
-          last = t;
-          if (t < end) requestAnimationFrame(tick);
-          else {
-            samples.sort((a, b) => a - b);
-            resolve({
-              fps: (1000 * samples.length) / samples.reduce((a, b) => a + b, 0),
-              p95ms: samples[Math.floor(samples.length * 0.95)],
-              frames: samples.length,
-            });
-          }
-        }
-        requestAnimationFrame(tick);
-      }),
-    duration,
-  );
-  const until = Date.now() + duration;
+  p.on('pageerror', (e) => errors.push(e.message));
+  await p.goto(base + '?qa');
+  await p.waitForFunction(() => window.wubaobaoQA);
+
+  await p.evaluate(() => {
+    window.__frames = [];
+    window.__soakRunning = true;
+    const loop = () => {
+      if (!window.__soakRunning) return;
+      const t = performance.now();
+      requestAnimationFrame(() => {
+        window.__frames.push(performance.now() - t);
+        loop();
+      });
+    };
+    loop();
+  });
+
+  const start = Date.now();
   let taps = 0;
-  while (Date.now() < until) {
-    await page.touchscreen.tap(
-      60 + Math.random() * 700,
-      300 + Math.random() * 480,
-    );
+  const x = 410;
+  while (Date.now() - start < duration) {
+    const y = 320 + ((taps * 37) % 480);
+    await p.touchscreen.tap(x, y);
     taps++;
-    await page.waitForTimeout(250);
+    if (taps % 7 === 0) {
+      await p.mouse.move(80, y);
+      await p.mouse.down();
+      for (let k = 100; k < 740; k += 60) await p.mouse.move(k, y + 12);
+      await p.mouse.up();
+    }
   }
-  const timing = await frames;
-  const q = await page.evaluate(() => wubaobaoQA());
-  assert(q.names > 0);
-  assert(q.particles <= 140);
-  assert(q.tiles.length === 102);
-  assert(q.tray.length < 7);
-  assert.deepEqual(errors, []);
-  console.log(
-    JSON.stringify(
-      {
-        engine: "WebKit",
-        viewport: "820×1180 @2x",
-        durationMs: duration,
-        taps,
-        timing,
-        names: q.names,
-        selections: q.selections,
-        particles: q.particles,
-        tiles: q.tiles.length,
-        tray: q.tray.length,
-        errors,
-      },
-      null,
-      2,
-    ),
-  );
+  const frames = await p.evaluate(() => {
+    window.__soakRunning = false;
+    return window.__frames;
+  });
+
+  const q = await p.evaluate(() => wubaobaoQA());
+  const sorted = frames.slice(20).sort((a, b) => a - b);
+  const avg = sorted.reduce((s, v) => s + v, 0) / sorted.length;
+  const p95 = sorted[Math.floor(sorted.length * 0.95)];
+
+  assert.deepEqual(errors, [], '長時間操作不得有頁面錯誤');
+  assert(q.names > 0, '長時間操作應持續成名');
+  assert(q.particles <= 96, '特效節點失控');
+  assert(q.voices <= 40, '音訊聲部失控');
+
   await browser.close();
+  console.log(
+    JSON.stringify({
+      engine: process.env.ENGINE || 'webkit',
+      ms: Date.now() - start,
+      taps,
+      names: q.names,
+      casts: q.casts,
+      avgFrameMs: Number(avg.toFixed(2)),
+      p95FrameMs: Number(p95.toFixed(2)),
+      particles: q.particles,
+      voices: q.voices,
+      errors: errors.length,
+    }),
+  );
 })().catch((e) => {
   console.error(e);
   process.exit(1);

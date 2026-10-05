@@ -6,141 +6,165 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#b9edf5" />
+    <meta name="theme-color" content="#f2e9d8" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <title>好字消消樂 · 給寶寶的好名字</title>
+    <meta
+      name="description"
+      content="吳・古本取名：依古本易經、古本紫微斗數、古本山海經、古本神農本草取名。喜用神只有木、火，木為喜用、火為次用。"
+    />
+    <title>吳・古本取名 · 木火為喜用</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <div class="scenery" aria-hidden="true">
-      <i class="cloud c1"></i><i class="cloud c2"></i><i class="hill h1"></i
-      ><i class="hill h2"></i>
+    <div class="desk" aria-hidden="true">
+      <i class="grain"></i>
     </div>
-    <main class="game-shell">
+
+    <main class="scroll-shell">
       <header class="topbar">
         <div class="brand">
-          <span class="brand-mark">吳</span
-          ><span
-            >好字<span class="brand-pink">消消樂</span
-            ><small>一點好運，一個好名字</small></span
-          >
+          <span class="brand-seal" aria-hidden="true">吳</span>
+          <span class="brand-text">
+            <b>古本取名</b>
+            <small>卜筮 · 星曜 · 山海 · 本草</small>
+          </span>
         </div>
-        <nav id="tools" aria-label="遊戲設定">
-          <button id="effectsToggle" class="round">
-            <b>♪</b><span>音效</span></button
-          ><button id="musicToggle" class="round">
-            <b>♫</b><span>音樂</span></button
-          ><button id="fullscreenToggle" class="round" aria-label="進入全螢幕">
-            <b>⛶</b><span>全螢幕</span>
+        <nav id="tools" aria-label="設定">
+          <button id="effectsToggle" class="round" type="button" aria-pressed="true">
+            <b aria-hidden="true">♪</b><span>音效</span>
+          </button>
+          <button id="musicToggle" class="round" type="button" aria-pressed="true">
+            <b aria-hidden="true">♫</b><span>音樂</span>
+          </button>
+          <button
+            id="fullscreenToggle"
+            class="round"
+            type="button"
+            aria-label="進入全螢幕"
+          >
+            <b aria-hidden="true">⛶</b><span>全螢幕</span>
           </button>
         </nav>
       </header>
-      <aside class="journey">
-        <div class="chapter">
-          <span class="chapter-icon">✿</span>
-          <div>
-            <small>好字花園</small>
-            <h1>把美好，<br />一張張收集。</h1>
+
+      <aside class="rail rail-left">
+        <section class="panel">
+          <h2 class="panel-title">古本四部</h2>
+          <div id="books" class="book-tabs" role="group" aria-label="選擇古本"></div>
+          <p id="bookBlurb" class="panel-note"></p>
+        </section>
+
+        <section class="panel">
+          <h2 class="panel-title">喜用神</h2>
+          <p class="panel-note keep">
+            原局木弱，火有而不得令。木為喜用、火為次用 —— 喜木，不狂補火。
+          </p>
+          <div id="wxbar" class="wxbar" role="group" aria-label="喜用神">
+            <button type="button" data-w="auto" aria-pressed="true">
+              <b>木火</b><small>七三之序</small>
+            </button>
+            <button type="button" data-w="木" aria-pressed="false">
+              <b>木</b><small>喜用 · 首選</small>
+            </button>
+            <button type="button" data-w="火" aria-pressed="false">
+              <b>火</b><small>次用 · 輔助</small>
+            </button>
           </div>
+        </section>
+
+        <section class="panel name-panel">
+          <h2 class="panel-title">所收之字</h2>
+          <div id="workline" class="workline" aria-live="polite">
+            <span class="slot surname">吳</span>
+            <span class="slot empty" id="slot0">？</span>
+            <span class="slot empty" id="slot1">？</span>
+          </div>
+          <div id="slotNotes" class="slot-notes"></div>
+        </section>
+
+        <button id="bookToggle" class="book-button" type="button">
+          <span class="book-icon" aria-hidden="true">函</span>
+          <span class="book-label"
+            >名錄<small>收藏每一次成卦</small></span
+          >
+          <span id="bookCount">0</span>
+          <span aria-hidden="true">›</span>
+        </button>
+
+        <p id="poolNote" class="pool-note"></p>
+      </aside>
+
+      <section class="stage-wrap" aria-label="六爻成卦">
+        <div class="stage-head">
+          <span id="castLabel" class="cast-label">爻 0 / 6</span>
+          <span id="stageBook" class="stage-book">古本易經</span>
         </div>
-        <p class="intro-copy">
-          翻開一層驚喜，湊齊三張好字。<br />下一個名字，就藏在這裡。
-        </p>
-        <section class="name-card">
-          <div class="card-heading">✦ 今日的名字靈感</div>
-          <div id="workline">
-            <span class="slot surname">吳</span
-            ><span class="slot empty" id="slot1">?</span
-            ><span class="slot empty" id="slot2">?</span>
+
+        <div id="stage" class="stage">
+          <div class="paper-grain" aria-hidden="true"></div>
+          <div id="hexagram" class="hexagram" role="img" aria-label="卦盤"></div>
+
+          <div class="scroll-text">
+            <div class="scroll-head">
+              <span id="panelSeal" class="panel-seal" aria-hidden="true">易</span>
+              <div>
+                <h2 id="panelTitle">靜待起卦</h2>
+                <p id="panelWx" class="panel-wx"></p>
+              </div>
+            </div>
+            <dl id="panelBody" class="panel-body"></dl>
           </div>
+
+          <p id="castHint" class="cast-hint">點一下卦盤，擲下第一爻。</p>
+        </div>
+
+        <div class="stage-foot">
           <div
             id="energy"
+            class="energy"
             role="progressbar"
-            aria-label="取名能量"
+            aria-label="成卦進度"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
           >
             <div class="energy-heading">
-              <span>♥ 好運能量</span><span id="energyLabel">0%</span>
+              <span>成卦進度</span><span id="energyLabel">0%</span>
             </div>
             <div class="energy-track"><div id="energyFill"></div></div>
           </div>
-          <p class="energy-note">每次觸碰都有能量，滿格就揭曉</p>
-        </section>
-        <section class="element-card">
-          <div class="card-heading">想收集哪一種祝福？</div>
-          <div id="wxbar" aria-label="五行喜用神">
-            <button class="active" data-w="auto" aria-pressed="true">
-              隨緣</button
-            ><button data-w="金" aria-pressed="false">金</button
-            ><button data-w="木" aria-pressed="false">木</button
-            ><button data-w="水" aria-pressed="false">水</button
-            ><button data-w="火" aria-pressed="false">火</button
-            ><button data-w="土" aria-pressed="false">土</button>
-          </div>
-        </section>
-        <button id="bookToggle" class="book-button">
-          <span class="book-icon">▤</span
-          ><span>我的名字簿<small>收藏每一次美好相遇</small></span
-          ><span id="bookCount">0</span><span>›</span>
-        </button>
-        <p class="parent-note">512 個好字 · 少筆畫也有好寓意</p>
-      </aside>
-      <section class="play-area" aria-label="三張配對遊戲">
-        <div class="level-bar">
-          <span class="level-pill">✿ <span id="levelLabel">花園 01</span></span>
-          <div class="match-progress">
-            <span id="matchLabel">0 組好字</span>
-            <div><i id="matchFill"></i></div>
-          </div>
-          <span class="star-badge">★ <b id="score">0</b></span>
-        </div>
-        <div id="stage" aria-label="點選未被遮住的字牌">
-          <div class="board-glow"></div>
-          <div id="board"></div>
-          <div id="combo" role="status"></div>
-        </div>
-        <div class="tray-area">
-          <div class="tray-heading">
-            <span>三張一樣，收下好運！</span
-            ><small id="remaining">準備好字中</small>
-          </div>
-          <div id="tray" aria-label="七格收集槽"></div>
-          <p id="playHint">點亮著的字牌，三張同字就能消除</p>
-        </div>
-        <nav class="boosters" aria-label="遊戲道具">
-          <button id="undoButton">
-            <span class="booster-icon peach">↶</span><span>撤回</span></button
-          ><button id="shuffleButton">
-            <span class="booster-icon lilac">⤨</span><span>重排</span></button
-          ><button id="hintButton">
-            <span class="booster-icon lemon">✦</span><span>湊一組</span>
+          <button id="castButton" class="cast-button" type="button">
+            擲爻
           </button>
-        </nav>
+        </div>
       </section>
     </main>
+
     <div id="effects" aria-hidden="true"></div>
     <div id="toast" class="hidden" role="status"></div>
-    <section id="book" class="hidden" aria-label="名字簿">
-      <button class="close" id="bookClose" aria-label="關閉名字簿">×</button>
-      <h2>我的名字簿</h2>
-      <p>每一個名字，都是新的可能。</p>
-      <div id="bookList"></div>
+
+    <section id="book" class="hidden" aria-label="名錄">
+      <div class="book-panel">
+        <button class="close" id="bookClose" type="button" aria-label="關閉名錄">×</button>
+        <h2>名錄</h2>
+        <p>每一次成卦，都留一個名字。</p>
+        <div id="bookList"></div>
+      </div>
     </section>
+
     <div id="reveal" class="hidden">
       <div class="reveal-card">
-        <div class="reveal-star">★</div>
-        <p class="reveal-eyebrow">美好的名字，為你綻放</p>
-        <div id="revealName" aria-live="polite"></div>
-        <div id="revealTag"></div>
-        <div id="revealMeaning"></div>
-        <span class="saved-badge">✓ 已收藏到名字簿</span>
-        <p class="reveal-hint">繼續摸摸，也能收集下一份好運</p>
+        <span class="reveal-seal" aria-hidden="true">名</span>
+        <p id="revealSource" class="reveal-source"></p>
+        <div id="revealName" class="reveal-name" aria-live="polite"></div>
+        <div id="revealTag" class="reveal-tag"></div>
+        <ul id="revealMeaning" class="reveal-meaning"></ul>
+        <span class="saved-badge">✓ 已收入名錄</span>
+        <p class="reveal-hint">繼續擲爻，也能再得一名</p>
       </div>
     </div>
-    <script src="js/namepool.js"></script>
+
     <script type="module" src="js/game.js"></script>
   </body>
 </html>

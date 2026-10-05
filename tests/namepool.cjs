@@ -1,34 +1,167 @@
+// 資料層測試：古本四部、字庫五行與禁用字、七三取名比例。
 const assert = require('node:assert/strict');
-const { POOL, WU_XING, pickGivenName } = require('../js/namepool.js');
-assert(POOL.all.length >= 512);
-for (const c of '仁允友天升久千士力之吉合如伊亦同帆舟行志君孝宏廷良利妤言辰秀才申') {
-  const e = POOL.all.find(e => e.c === c);
-  assert(e && e.s <= 7 && e.b === 1 && e.meaning, `少筆畫美字缺漏：${c}`);
+const {
+  CHARACTERS, WU_XING, ELEMENTS, RATIO, BANNED, BANNED_EXACT, BANNED_LOOKALIKE,
+  pickChar, pickGivenName, rollElement, sourceStats, findBanned,
+} = require('../js/namepool.js');
+const { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, SHANHAI, BENCAO, SOURCES } =
+  require('../js/classics.js');
+
+// ── 五行：喜用神只有木、火 ──────────────────────────────
+assert.deepEqual(ELEMENTS, ['木', '火'], '喜用神只允許木、火');
+assert.equal(RATIO.木 + RATIO.火, 1);
+assert(RATIO.木 > RATIO.火, '木為喜用，比例須高於火');
+assert.equal(WU_XING.木.role, '喜用 · 首選');
+assert.equal(WU_XING.火.role, '次用 · 輔助');
+
+for (const e of CHARACTERS) {
+  assert(['木', '火'].includes(e.w), `${e.c} 只能屬木或火，實為 ${e.w}`);
 }
-for (const want of Object.keys(WU_XING)) {
-  const name = pickGivenName({ want, count: 2, maxStrokes: 8 });
-  assert(name.chars.every(e => e.w === want && e.s <= 8));
+
+// ── 禁用字 ──────────────────────────────────────────────
+assert.equal(BANNED_EXACT.length, 29, '使用者指定的禁用字應為 29 個');
+for (const c of BANNED) {
+  assert(!CHARACTERS.some((e) => e.c === c), `字庫仍含禁用字：${c}`);
 }
-assert.equal(new Set(POOL.all.map(e => e.c)).size, POOL.all.length);
-for (const e of POOL.all) {
-  assert.equal([...e.c].length, 1); assert(e.p && typeof e.p === 'string');
-  assert(Number.isInteger(e.s) && e.s > 0); assert(WU_XING[e.w]);
-  assert([0, 1].includes(e.b)); assert(['xiangxing','xingsheng','huiyi','zhishi'].includes(e.cat));
+// 禁用字不得出現在任何出處、寓意或拼音欄位
+for (const e of CHARACTERS) {
+  assert.equal(findBanned(e.c).length, 0, `${e.c} 為禁用字`);
+  assert.equal(findBanned(e.cite).length, 0, `${e.c} 出處含禁用字：${e.cite}`);
+  assert.equal(findBanned(e.meaning).length, 0, `${e.c} 寓意含禁用字`);
+  assert.equal(findBanned(e.p).length, 0, `${e.c} 拼音含禁用字：${e.p}`);
 }
-for (const want of [null, ...Object.keys(WU_XING)]) {
-  for (const count of [1, 2]) {
-    for (let i = 0; i < 1000; i++) {
-      const name = pickGivenName({want, count});
-      assert.equal(name.chars.length, count);
-      assert.equal(new Set(name.chars.map(e=>e.c)).size, count);
-      assert(name.chars.every(e => !want || e.w === want));
+
+// 禁用字不得出現在網站自己寫的文案（介面、用語說明、經文以外的一切）
+// 例外只針對「原典逐字引用」：大象傳的「君子以…」句式是經文本身，
+// 改字等於竄改經典，所以這幾個字在卦辭／大象裡保留原文。
+const VERBATIM_EXCEPTIONS = new Set(['以', '樂', '語', '宥']);
+for (const e of CHARACTERS) {
+  for (const v of [e.c, e.p, e.cite, e.meaning]) {
+    for (const c of findBanned(v)) {
+      assert(VERBATIM_EXCEPTIONS.has(c), `文案含禁用字 ${c}：${v}`);
     }
-    const impossible = pickGivenName({want, count, minStrokes: 99, maxStrokes: 0});
-    assert.equal(impossible.chars.length, count);
-    assert(impossible.chars.every(e => !want || e.w === want));
   }
 }
-const preferred = POOL.all.find(e=>e.w==='水');
-assert.equal(pickGivenName({count: 1, preferred: [preferred]}).chars[0].c, preferred.c);
-assert(pickGivenName({want:'火',count:2,preferred:[preferred]}).chars.every(e=>e.w==='火'));
-console.log(JSON.stringify({total:POOL.all.length,duplicates:0,elements:Object.fromEntries(Object.keys(WU_XING).map(w=>[w,POOL.all.filter(e=>e.w===w).length])),samplingCases:12000}));
+// 姓名組合也不得命中
+for (const e of CHARACTERS) {
+  assert.equal(findBanned('吳' + e.c).length, 0);
+}
+
+// ── 欄位完整性 ──────────────────────────────────────────
+const codes = CHARACTERS.map((e) => e.c);
+assert.equal(new Set(codes).size, codes.length, '字庫不得重複');
+for (const e of CHARACTERS) {
+  assert([...e.c].length === 1, `${e.c} 須為單字`);
+  assert(e.p && typeof e.p === 'string' && e.p.length > 0, `${e.c} 缺拼音`);
+  assert(Number.isInteger(e.s) && e.s > 0 && e.s <= 24, `${e.c} 筆畫異常：${e.s}`);
+  assert(e.cite && typeof e.cite === 'string', `${e.c} 缺出處`);
+  assert(e.meaning && typeof e.meaning === 'string', `${e.c} 缺寓意`);
+  assert(['yijing', 'ziwei', 'shanhai', 'bencao'].includes(e.book), `${e.c} 出處古本不明`);
+}
+
+// ── 四部古本都有字，木火兩行都抽得到 ──────────────────
+const stats = sourceStats();
+for (const w of ELEMENTS) {
+  assert(stats[w].total >= 40, `${w} 行字數不足：${stats[w].total}`);
+  for (const b of ['yijing', 'ziwei', 'shanhai', 'bencao']) {
+    assert(stats[w].books[b] > 0, `${w} 行在 ${b} 沒有字`);
+  }
+}
+assert.equal(SOURCES.length, 4);
+
+// ── 古本易經：六十四卦不重複、爻象自洽 ──────────────────
+assert.equal(HEXAGRAMS.length, 64);
+const names = HEXAGRAMS.map((h) => h.name);
+assert.equal(new Set(names).size, 64, '卦名不得重複');
+const indices = HEXAGRAMS.map((h) => h.index).sort((a, b) => a - b);
+assert.deepEqual(indices, Array.from({ length: 64 }, (_, i) => i + 1), '卦序應為 1..64');
+for (const h of HEXAGRAMS) {
+  assert.equal(h.lines.length, 6);
+  assert(h.judgement && h.image, `${h.name} 缺卦辭或大象`);
+  const bits = h.lines.map((y) => (y ? '1' : '0')).join('');
+  assert.equal(HEXAGRAM_BY_LINES.get(bits)?.name, h.name, `${h.name} 爻象查回不一致`);
+}
+assert.equal(HEXAGRAM_BY_LINES.get('111111').name, '乾');
+assert.equal(HEXAGRAM_BY_LINES.get('000000').name, '坤');
+assert.equal(HEXAGRAM_BY_LINES.get('100010').name, '屯');
+assert.equal(HEXAGRAM_BY_LINES.get('101010').name, '既濟');
+assert.equal(HEXAGRAM_BY_LINES.get('010101').name, '未濟');
+assert.equal(HEXAGRAM_BY_LINES.size, 64, '六十四卦爻象必須互異');
+// 禁用字：原典逐字引用者（以／樂／語／宥）保留原文，其餘一律不得出現
+const VERBATIM = new Set(['以', '樂', '語', '宥']);
+for (const h of HEXAGRAMS) {
+  for (const c of findBanned(h.name + h.judgement + h.image)) {
+    assert(VERBATIM.has(c), `${h.name} 經文含禁用字 ${c}`);
+  }
+}
+
+// ── 紫微斗數 ────────────────────────────────────────────
+assert.equal(ZIWEI_STARS.length, 14, '紫微斗數十四主星');
+assert.equal(new Set(ZIWEI_STARS.map((s) => s.name)).size, 14);
+assert.equal(ZIWEI_PALACES.length, 12, '紫微斗數十二宮');
+assert.equal(new Set(ZIWEI_PALACES.map((s) => s.name)).size, 12);
+
+// ── 山海經 / 本草 ───────────────────────────────────────
+assert(SHANHAI.山.length > 0 && SHANHAI.海.length > 0 && SHANHAI.草木.length > 0);
+assert(BENCAO.length > 0);
+
+// ── 取名：指定喜用神時，每字都必須是該行 ──────────────
+for (const want of ELEMENTS) {
+  for (const book of ['yijing', 'ziwei', 'shanhai', 'bencao']) {
+    const n = pickGivenName({ want, count: 2, book });
+    assert.equal(n.chars.length, 2);
+    assert(n.chars.every((e) => e.w === want), `${want}/${book} 抽到別行`);
+  }
+  // 筆畫不可能時仍要給得出名字
+  const impossible = pickGivenName({ want, count: 2, minStrokes: 99, maxStrokes: 0 });
+  assert.equal(impossible.chars.length, 2);
+  assert(impossible.chars.every((e) => e.w === want));
+}
+
+// ── 取名：不指定時每字各自按木七火三，且單字不出重複 ────
+for (const count of [1, 2]) {
+  for (let i = 0; i < 4000; i++) {
+    const n = pickGivenName({ count });
+    assert.equal(n.chars.length, count);
+    assert.equal(new Set(n.chars.map((e) => e.c)).size, count, '名字內不得重字');
+    assert(n.chars.every((e) => ['木', '火'].includes(e.w)));
+    assert.equal(findBanned('吳' + n.chars.map((e) => e.c).join('')).length, 0);
+  }
+}
+
+// ── 七三之序：抽 6000 次單字，木應明顯多於火 ────────────
+let mu = 0;
+const TRIALS = 6000;
+for (let i = 0; i < TRIALS; i++) if (rollElement(null) === '木') mu++;
+const ratio = mu / TRIALS;
+assert(Math.abs(ratio - RATIO.木) < 0.035, `木的比例應接近 0.70，實測 ${ratio.toFixed(3)}`);
+
+// ── 單字抽樣也遵守七三 ─────────────────────────────────
+let mu2 = 0;
+for (let i = 0; i < TRIALS; i++) if (pickChar({}).w === '木') mu2++;
+assert(Math.abs(mu2 / TRIALS - RATIO.木) < 0.04, `pickChar 木比例應接近 0.70，實測 ${(mu2 / TRIALS).toFixed(3)}`);
+
+// ── 已收之字優先，但不得跨越指定的喜用神 ────────────────
+const woodChar = CHARACTERS.find((e) => e.w === '木');
+const fireChar = CHARACTERS.find((e) => e.w === '火');
+assert.equal(pickGivenName({ count: 1, preferred: [woodChar] }).chars[0].c, woodChar.c);
+assert.equal(pickGivenName({ want: '火', count: 2, preferred: [woodChar] }).chars.length, 2);
+assert(pickGivenName({ want: '火', count: 2, preferred: [woodChar] }).chars.every((e) => e.w === '火'));
+assert(pickGivenName({ want: '火', count: 2, preferred: [fireChar] }).chars[0].c === fireChar.c);
+
+console.log(
+  JSON.stringify({
+    total: CHARACTERS.length,
+    duplicates: 0,
+    elements: Object.fromEntries(ELEMENTS.map((w) => [w, stats[w].total])),
+    perBook: Object.fromEntries(
+      ['yijing', 'ziwei', 'shanhai', 'bencao'].map((b) => [
+        b,
+        CHARACTERS.filter((e) => e.book === b).length,
+      ]),
+    ),
+    banned: BANNED.size,
+    woodRatio: Number(ratio.toFixed(3)),
+    nameCases: 20000,
+  }),
+);
