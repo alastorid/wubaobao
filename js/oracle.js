@@ -14,7 +14,7 @@
 //   古本詩經      → 依六爻定篇，得風雅頌的名句
 //   古本楚辭      → 依六爻定篇，得離騷九歌的名句
 
-import { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX, SHANHAI, BENCAO, DAODEJING, BAOPUZI, SHIJING, CHUJI } from './classics.js';
+import { HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX, SHANHAI, BENCAO, DAODEJING, BAOPUZI, SHIJING, CHUCI } from './classics.js';
 import { pickChar } from './namepool.js';
 
 export const LINE_COUNT = 6;
@@ -103,7 +103,7 @@ export function resolveCasting(book, lines) {
   }
 
   if (book === 'chuji') {
-    const poem = CHUJI[parseInt(bits, 2) % CHUJI.length];
+    const poem = CHUCI[parseInt(bits, 2) % CHUCI.length];
     return {
       kind: 'chuji',
       seal: '騷',

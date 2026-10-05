@@ -1,35 +1,17 @@
-// 測試用的經文資料載入（把 js/classics.js 的 ESM 轉成 CJS）。
+// 測試用的古本經文載入（回傳 Promise）。
 //
-// js/classics.js 是 ESM（給瀏覽器用），檔尾也掛了 module.exports 給 Node。
-// 但 Node 26 的 require() 讀這種「ESM + module.exports」的檔案會拿到
-// namespace 卻有部分匯出是 undefined（實測 CHUJI 即如此，ESM import 正常）。
-// 與其跟 require 的互動細節纏鬥，這裡自己轉一次 CJS。
-const fs = require('node:fs');
+// js/classics.js 是 ESM。js/oracle.js 用 import 載它，測試端若用 require()
+// 讀同一個檔案，匯出行為不一致，所以這裡一律走動態 import()，
+// 和瀏覽器、js/oracle.js 走同一條路徑。回傳 Promise，呼叫端自行 await。
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 
-const file = path.join(__dirname, '..', 'js', 'classics.js');
-const source = fs.readFileSync(file, 'utf8');
+const FILE = path.join(__dirname, '..', 'js', 'classics.js');
 
-const EXPORTS = [
-  'TRIGRAMS', 'HEXAGRAMS', 'HEXAGRAM_BY_LINES',
-  'ZIWEI_STARS', 'ZIWEI_PALACES', 'ZIWEI_HUA', 'ZIWEI_SHEN', 'ZIWEI_AUX',
-  'SHANHAI', 'SHANHAI_SECTIONS', 'BENCAO', 'BENCAO_CHAR_HINT',
-  'DAODEJING', 'BAOPUZI', 'SHIJING', 'CHUJI', 'SOURCES', 'SOURCE_BY_ID',
-];
+let cached = null;
+const load = () => {
+  if (!cached) cached = import(pathToFileURL(FILE).href);
+  return cached;
+};
 
-const cjs =
-  source
-    // export const X = → const X =（不進 module.exports 的內容）
-    .replace(/^export const /gm, 'const ')
-    .replace(/^export function /gm, 'function ')
-    .replace(/^export (let|class) /gm, '$1 ')
-    // 檔尾原本的 module.exports 區塊不用了，我們自己組
-    .replace(/if \(typeof module !== 'undefined'\) \{[\s\S]*?\n\}\n?$/m, '')
-    + `\nmodule.exports = { ${EXPORTS.join(', ')} };\n`;
-
-// 用 indirect eval 取得 module.exports，避免檔名結尾 .cjs 造成自我比對問題
-const load = new Function('module', 'exports', 'require', '__filename', '__dirname', cjs);
-const mod = { exports: {} };
-load(mod, mod.exports, require, file, path.dirname(file));
-
-module.exports = mod.exports;
+module.exports = load;

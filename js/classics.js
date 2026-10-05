@@ -350,7 +350,7 @@ export const SHIJING = Object.freeze([
 // ── 楚辭 ──────────────────────────────────────────────
 // 屈原、宋玉。以《離騷》《九歌》為主。取字集中在香草與美人，
 // 這是八部古本裡最偏詩意、也最貼合女名的一部。經文照通行本。
-export const CHUJI = Object.freeze([
+export const CHUCI = Object.freeze([
   { part: '離騷', title: '滋蘭', text: '余既滋蘭之九畹兮，又樹蕙之百畹。冀枝葉之峻茂兮，願俟時乎吾將刈。' },
   { part: '離騷', title: '扈芷', text: '扈江離與辟芷兮，紉秋蘭以為佩。' },
   { part: '離騷', title: '雜糅', text: '芳與澤其雜糅兮，唯昭質其猶未虧。' },
@@ -440,6 +440,6 @@ if (typeof module !== 'undefined') {
     TRIGRAMS, HEXAGRAMS, HEXAGRAM_BY_LINES,
     ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX,
     SHANHAI, SHANHAI_SECTIONS, BENCAO, BENCAO_CHAR_HINT,
-    DAODEJING, BAOPUZI, SHIJING, CHUJI, SOURCES, SOURCE_BY_ID,
+    DAODEJING, BAOPUZI, SHIJING, CHUCI, SOURCES, SOURCE_BY_ID,
   };
 }
