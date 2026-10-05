@@ -327,6 +327,26 @@ export const BAOPUZI = Object.freeze([
   { part: '內篇', title: '忠臣', text: '論臣節，盡忠而不阿。' },
 ]);
 
+// ── 詩經 ──────────────────────────────────────────────
+// 風、雅、頌。漢語名字裡最好的花木字與女德字幾乎都在這裡，
+// 這也是七部古本中最偏詩意的一部。經文照通行本，標點為本站所加。
+export const SHIJING = Object.freeze([
+  { part: '周南', title: '關雎', text: '窈窕淑女，寤寐求之。求之不得，寤寐思服。' },
+  { part: '周南', title: '桃夭', text: '桃之夭夭，灼灼其華。之子于歸，宜其室家。' },
+  { part: '召南', title: '采蘋', text: '于以采蘋，南澗之濱。于以盛之，維筐及筥。' },
+  { part: '召南', title: '采蘩', text: '于以采蘩，于沼于沚。于以用之，維公侯之事。' },
+  { part: '邶風', title: '靜女', text: '靜女其姝，俟我於城隅。愛而不见，搔首踟躕。' },
+  { part: '衛風', title: '碩人', text: '巧笑倩兮，美目盼兮。' },
+  { part: '陳風', title: '月出', text: '月出皎兮，舒窈糾兮。勞心忉兮，俾勿忘反。' },
+  { part: '小雅', title: '采薇', text: '采薇采薇，薇亦作止。曰歸曰歸，歲亦云暮。' },
+  { part: '王風', title: '采葛', text: '采葛采葛，葛之蓁蓁。' },
+  { part: '鄭風', title: '有女同車', text: '有女同車，顏如舜華。雜佩以贈之。' },
+  { part: '鄭風', title: '褰裳', text: '心乎愛矣，遐不謂矣。中心悅之。' },
+  { part: '周頌', title: '維天之命', text: '假樂皇祖，遐不眉壽。惠然肯來。' },
+  { part: '王風', title: '揚之水', text: '揚之水，不流束楚。' },
+  { part: '豳風', title: '七月', text: '春日載陽，有鳴倉庚。女執懿筐，歲彼維常。' },
+]);
+
 
 export const SOURCES = Object.freeze([
   {
@@ -377,6 +397,14 @@ export const SOURCES = Object.freeze([
     wx: '木',
     blurb: '葛洪內篇，金丹養生兼修德行。取字於煉、壽、誠、忠。',
   },
+  {
+    id: 'shijing',
+    name: '古本詩經',
+    seal: '詩',
+    era: '西周',
+    wx: '木',
+    blurb: '風雅頌三體。取字於采葛采薇、灼灼其華、巧笑倩兮 —— 七部裡最偏詩意的一部。',
+  },
 ]);
 
 export const SOURCE_BY_ID = Object.freeze(
@@ -388,6 +416,6 @@ if (typeof module !== 'undefined') {
     TRIGRAMS, HEXAGRAMS, HEXAGRAM_BY_LINES,
     ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX,
     SHANHAI, SHANHAI_SECTIONS, BENCAO, BENCAO_CHAR_HINT,
-    DAODEJING, BAOPUZI, SOURCES, SOURCE_BY_ID,
+    DAODEJING, BAOPUZI, SHIJING, SOURCES, SOURCE_BY_ID,
   };
 }
