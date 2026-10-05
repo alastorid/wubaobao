@@ -273,6 +273,17 @@ function renderBooks() {
   $('bookBlurb').textContent = SOURCE_BY_ID[book].blurb;
   // 卦檯角落的硃砂印跟著古本換
   $('stage').dataset.seal = SOURCE_BY_ID[book].seal;
+  updatePoolNote();
+}
+
+// 標題與副標跟著古本數量走，日後增刪不必改文案
+const CN_NUM = '零一二三四五六七八九十';
+function renderSourceTitles() {
+  const count = SOURCES.length;
+  $('booksTitle').textContent = `古本${CN_NUM[count] || count}部`;
+  $('brandSub').textContent = SOURCES.map((s) =>
+    s.name.replace('古本', '').replace('神農本草', '本草'),
+  ).join(' · ');
 }
 
 // ── 複製名錄 ────────────────────────────────────────────
@@ -347,15 +358,6 @@ async function copyMode(mode) {
   } else {
     toast('這個瀏覽器不允許自動複製，請手動選取');
   }
-}
-
-// 標題與副標跟著古本數量走，日後增刪不必改文案
-function renderSourceTitles() {
-  const count = SOURCES.length;
-  $('booksTitle').textContent = `古本${'一二三四五六七八九十'[count - 1] || count}部`;
-  $('brandSub').textContent = SOURCES.map((s) =>
-    s.name.replace('古本', '').replace('神農本草', '本草'),
-  ).join(' · ');
 }
 
 // ── 名錄 ────────────────────────────────────────────────
@@ -517,7 +519,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── 啟動 ────────────────────────────────────────────────
-function renderPoolNote() {
+function updatePoolNote() {
   const s = sourceStats();
   $('poolNote').textContent =
     `${CHARACTERS.length} 個古本取名用字 · 木 ${s.木.total} 字（火 ${s.火.total} 字） · 七三之序取名`;
@@ -528,7 +530,7 @@ renderHexagram();
 renderProgress();
 renderSlots();
 renderPanel();
-renderPoolNote();
+updatePoolNote();
 loadNames();
 renderBook();
 
