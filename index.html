@@ -75,8 +75,22 @@
 
         <section class="panel name-panel">
           <h2 class="panel-title">所收之字</h2>
+          <p class="surname-field">
+            <label for="surnameInput">姓</label>
+            <input
+              id="surnameInput"
+              type="text"
+              value="吳"
+              maxlength="2"
+              size="2"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="surnameHint"
+            />
+            <small id="surnameHint">請換成孩子的姓</small>
+          </p>
           <div id="workline" class="workline" aria-live="polite">
-            <span class="slot surname">吳</span>
+            <span class="slot surname" id="surnameSlot">吳</span>
             <span class="slot empty" id="slot0">？</span>
             <span class="slot empty" id="slot1">？</span>
           </div>

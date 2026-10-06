@@ -1,5 +1,13 @@
-// 驗證 sources.cjs 裡每一則「同句」引文，真的出現在 js/classics.js 的經文中。
-// 引文若對不上就是偽造，必須抓出來。
+// 驗證 tools/sources.cjs 裡的 classic 層引文真的出現在 js/classics.js 的經文中。
+//
+// 這條檢查的效力和它的邊界，必須講清楚：
+//   它能驗的是「引文有沒有被改寫」——比對 classics.js 的實際文本。
+//   它驗不了的是「classics.js 的文本本身對不對」——那是另一個問題，
+//   需要拿外部原文比對，不是自我比對能解決的。
+//
+// 所以神農本草與紫微斗數的條目被排除在 classic 層之外：
+// 那兩部的資料欄位是「藥名索引」與「現代命理描述」，不是原文。
+// 把現代描述放進經文層再拿自己比對自己，等於自我循環，驗證不到任何東西。
 const path = require('node:path');
 const { CLASSIC_SAME_SENTENCE } = require(path.join(__dirname, 'sources.cjs'));
 const loadClassics = require(path.join(__dirname, '..', 'tests', 'classics.cjs'));

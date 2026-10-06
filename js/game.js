@@ -5,7 +5,9 @@
 import { SoundGarden } from './audio.js';
 import { SOURCES, SOURCE_BY_ID } from './classics.js';
 import { castChar, castLine, resolveCasting, LINE_COUNT } from './oracle.js';
-import { CHARACTERS, WU_XING, RATIO, pickGivenName, findBanned, sourceStats } from './namepool.js';
+import {
+  CHARACTERS, CHAR_BY_CODE, WU_XING, RATIO, pickGivenName, findBanned, sourceStats,
+} from './namepool.js';
 
 const $ = (id) => document.getElementById(id);
 const sound = new SoundGarden();
@@ -25,6 +27,74 @@ let pointer = null;
 let revealTimer = null;
 let toastTimer = null;
 const stats = { taps: 0, hexagrams: 0, reveals: 0 };
+
+// ── 姓 ────────────────────────────────────────────────────
+// 姓不再寫死「吳」。原因有二：
+//   1. 產品對不姓吳的家庭毫無用處。
+//   2. 普通話「吳」與「無」同音，姓吳會讓每個名字都自動產生一個
+//      「無X」的諧音（吳德＝無德、吳明＝無名、吳夫＝無夫）。
+//      讓使用者自己填姓，並對連讀諧音做檢查，才是正確做法。
+const DEFAULT_SURNAME = '吳';
+let SURNAME = DEFAULT_SURNAME;
+const SURNAME_KEY = 'wubaobao-surname';
+
+// 姓＋名連讀會變成不好聽的詞時擋下。
+// 只擋明確的負面連讀，不做過度猜測。
+const SURNAME_CLASH = new Map([
+  // 吳＝無
+  ['夫', 'wú fū「無夫」'], ['死', 'wú sǐ「無死」'], ['命', 'wú mìng「無命」'],
+  ['物', 'wú wù「無物」'], ['異', 'wú yì「無異」'], ['精', 'wú jīng「無精」'],
+  ['文', 'wú wén「無文」'], ['德', 'wú dé「無德」'], ['明', 'wú míng「無名」'],
+  ['容', 'wú róng「無容」'], ['嘉', 'wú jiā「無家」'], ['門', 'wú mén「無門」'],
+  ['光', 'wú guāng「無光」'], ['情', 'wú qíng「無情」'], ['知', 'wú zhī「無知」'],
+  ['行', 'wú xíng「無行」'], ['思', 'wú sī「無私」'], ['善', 'wú shàn「無善」'],
+  ['愛', 'wú ài「無愛」'], ['聲', 'wú shēng「無聲」'], ['果', 'wú guǒ「無果」'],
+  // 其他常見姓的連讀風險
+  ['琴', 'qín qín「琴琴」'], ['逍', 'xiāo yáo'],
+]);
+
+function surnameClash(chars) {
+  for (const c of chars) {
+    if (SURNAME === '吳' && SURNAME_CLASH.has(c)) return SURNAME_CLASH.get(c);
+    // 「梧」與「吳」同音：吳梧＝wú wú
+    if (SURNAME === '吳' && c === '梧') return 'wú wú（同音疊字）';
+  }
+  return null;
+}
+
+function surnameValid(s) {
+  // 一到兩個漢字。只收漢字，不收空白或符號（名簿與複製都靠它）。
+  return /^[一-鿿]{1,2}$/.test(s);
+}
+
+function loadSurname() {
+  try {
+    const saved = localStorage.getItem(SURNAME_KEY);
+    if (saved && surnameValid(saved)) SURNAME = saved;
+  } catch {
+    /* localStorage 不可用就沿用預設值 */
+  }
+}
+
+function setSurname(next) {
+  SURNAME = surnameValid(next) ? next : DEFAULT_SURNAME;
+  try {
+    localStorage.setItem(SURNAME_KEY, SURNAME);
+  } catch {
+    /* 存不進去不影響本次使用 */
+  }
+  const slot = $('surnameSlot');
+  if (slot) slot.textContent = SURNAME;
+  const input = $('surnameInput');
+  if (input && input.value !== SURNAME) input.value = SURNAME;
+  // 舊名錄是用「吳」存的，換姓後顯示也要跟著換。
+  for (const n of names) {
+    if (typeof n.name === 'string' && n.name.startsWith(DEFAULT_SURNAME)) {
+      n.name = SURNAME + n.name.slice(DEFAULT_SURNAME.length);
+    }
+  }
+  renderBook();
+}
 
 // ── 卦盤 ────────────────────────────────────────────────
 // 少陰 ⚋ = 兩段、少陽 ⚊ = 一段；由上爻往初爻顯示，與卦辭一致。
@@ -114,7 +184,9 @@ function renderSlots() {
   host.replaceChildren(
     ...notes.filter(Boolean).map((entry) => {
       const p = document.createElement('p');
-      p.textContent = `${entry.c} · ${entry.s}畫 · ${bookLabel(entry.book)} ${entry.cite} · ${entry.meaning}`;
+      // 同上：cite 已含書名，不再疊 bookLabel。
+      const cite = entry.cite || `${bookLabel(entry.book)} ${entry.book}`;
+      p.textContent = `${entry.c} · ${entry.s}畫 · ${cite} · ${entry.meaning}`;
       return p;
     }),
   );
@@ -171,21 +243,41 @@ function complete() {
     preferred: caught,
   });
   if (!given.chars.length) return;
-  const full = '吳' + given.chars.map((e) => e.c).join('');
-  const banned = findBanned(full);
-  if (banned.length) {
-    // 自我防護：禁用字不可能進入名字簿
-    console.warn('命中禁用字，已跳過：', banned.join(''));
-    return;
+  // 三道自我防護：使用者禁用字、行業忌字、以及「姓＋名」連讀的諧音陷阱。
+  //
+  // 這三道都會「重抽」而不是直接放棄名字。原因是「擲滿六爻必定成名」
+  // 是產品承諾：使用者擲了六次就要拿到一個名字，不能因為諧音檢查
+  // 抽到就整個丟掉，否則會出現擲滿六爻卻什麼都沒有的情況。
+  let full = '';
+  let picked = given;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const candidate = SURNAME + picked.chars.map((e) => e.c).join('');
+    if (picked.chars.length && !findBanned(candidate).any.length
+        && !surnameClash(picked.chars.map((e) => e.c))) {
+      full = candidate;
+      break;
+    }
+    // 這一組不行就換一組。preferred 是本輪已收之字，
+    // 重抽時不再偏好它們，避免一直撞到同一批。
+    const retry = pickGivenName({
+      want: target === 'auto' ? null : target,
+      count: picked.count,
+    });
+    if (!retry.chars.length) break;
+    picked = retry;
   }
+  if (!full) return;
+  // 用 picked 而不是 given：上面那一輪重抽可能換了字。
   const record = {
     name: full,
-    chars: given.chars.map((e) => e.c),
-    pinyin: given.chars.map((e) => e.p).join(' '),
-    wx: given.elements,
-    cites: given.chars.map((e) => `${bookLabel(e.book)} ${e.cite}`),
-    meanings: given.chars.map((e) => e.meaning),
-    strokes: given.chars.map((e) => e.s),
+    chars: picked.chars.map((e) => e.c),
+    pinyin: picked.chars.map((e) => e.p).join(' '),
+    wx: picked.elements,
+    // cite 本身就已經標了書名（「易經·大過·卦辭」），不要再疊一層
+    // bookLabel（「古本易經」），否則會顯示成「古本易經 易經·大過·卦辭」。
+    cites: picked.chars.map((e) => e.cite),
+    meanings: picked.chars.map((e) => e.meaning),
+    strokes: picked.chars.map((e) => e.s),
     book,
     casting: casting ? casting.title : '',
     ts: Date.now(),
@@ -200,10 +292,17 @@ function complete() {
     ? `${bookLabel(book)} · ${casting.title}`
     : bookLabel(book);
   $('revealName').textContent = full;
+  // 拼音用不換行空格接起來。
+  //
+  // 理由：兩個音節之間用一般空格時，瀏覽器會在那裡斷行，
+  // 「zhēn rén」會變成「zhēn」一行、「rén」一行——看起來像兩個詞。
+  // 用 U+00A0（不換行空格）之後整組拼音保證同行，
+  // 需要的話只會在「·」之後斷行。
+  const pinyin = record.pinyin.replace(/ /g, '\u00a0');
   $('revealTag').textContent =
-    given.elements.map((w) => `${w}（${WU_XING[w].role}）`).join(' · ') +
+    picked.elements.map((w) => `${w}（${WU_XING[w].role}）`).join(' · ') +
     ' · ' +
-    record.pinyin;
+    pinyin;
   const list = document.createDocumentFragment();
   record.chars.forEach((c, i) => {
     const li = document.createElement('li');
@@ -366,15 +465,66 @@ function saveNames() {
     localStorage.setItem('wubaobao-names', JSON.stringify(names));
   } catch {}
 }
+// 舊名錄的每一筆都要通過結構檢查。
+// 只驗 name/chars 是不夠的：wx、strokes、cites、meanings 若型別錯誤，
+// 下面 renderBook 的 (n.wx || []).join 會拋錯，而那次呼叫在模組頂層，
+// 會讓整個模組中止、連 QA 快照都不會定義，而且沒有任何復原管道。
+// 這裡逐項驗過，任何一項不合格就丟棄該筆（寧可少一個名字，不可整頁壞掉）。
+function sanitizeName(n) {
+  if (!n || typeof n !== 'object') return null;
+  if (typeof n.name !== 'string' || !n.name) return null;
+  if (!Array.isArray(n.chars) || !n.chars.length) return null;
+  if (!n.chars.every((c) => typeof c === 'string' && c)) return null;
+
+  // 五行：舊格式是字串陣列，新格式是 {木,火} 物件。兩者都要能安全處理。
+  let wx = [];
+  if (Array.isArray(n.wx)) {
+    wx = n.wx.filter((w) => w === '木' || w === '火');
+  } else if (n.wx && typeof n.wx === 'object') {
+    wx = [n.wx['木'], n.wx['火']].filter((w) => w === '木' || w === '火');
+  }
+  if (!wx.length) wx = n.chars.map((c) => CHAR_BY_CODE.get(c)?.w).filter(Boolean);
+
+  // 筆畫／出處／字義：型別不符就補空字串，長度以 chars 為準。
+  const strArray = (v, fallback = '') =>
+    (Array.isArray(v) ? v : []).map((x) => (typeof x === 'string' ? x : fallback));
+
+  const strokes = n.chars.map((c, i) => {
+    const v = Array.isArray(n.strokes) ? n.strokes[i] : n.strokes;
+    return typeof v === 'number' && Number.isFinite(v) ? v : (CHAR_BY_CODE.get(c)?.s ?? 0);
+  });
+
+  return {
+    name: n.name,
+    chars: n.chars,
+    wx,
+    pinyin: typeof n.pinyin === 'string' ? n.pinyin : n.chars.map((c) => CHAR_BY_CODE.get(c)?.p || '').join(' '),
+    strokes,
+    // 用 || 不用 ??：strArray 對型別不符的值會回傳空字串，
+    // 而空字串是「舊資料缺這個欄位」，應該回填字庫裡的真實出處，
+    // 不是把空白顯示給使用者。
+    cites: n.chars.map((c, i) => strArray(n.cites)[i] || CHAR_BY_CODE.get(c)?.cite || ''),
+    meanings: n.chars.map((c, i) => strArray(n.meanings)[i] || CHAR_BY_CODE.get(c)?.meaning || ''),
+    hexagram: typeof n.hexagram === 'string' ? n.hexagram : '',
+    book: typeof n.book === 'string' ? n.book : '',
+  };
+}
+
 function loadNames() {
   try {
     const parsed = JSON.parse(localStorage.getItem('wubaobao-names') || '[]');
-    names = Array.isArray(parsed)
-      ? parsed
-          .filter((n) => n && typeof n.name === 'string' && Array.isArray(n.chars))
-          .filter((n) => !findBanned(n.name).length)
-          .slice(0, 200)
-      : [];
+    if (!Array.isArray(parsed)) {
+      names = [];
+      return;
+    }
+    names = parsed
+      .map(sanitizeName)
+      .filter(Boolean)
+      // 禁用字與取名忌字都要擋，而且要連 chars 一起檢查——
+      // 只查 name 會讓 chars 裡夾帶的忌字漏過。
+      .filter((n) => !findBanned(n.name).any.length)
+      .filter((n) => !n.chars.some((c) => findBanned(c).any.length))
+      .slice(0, 200);
   } catch {
     names = [];
   }
@@ -531,13 +681,31 @@ renderProgress();
 renderSlots();
 renderPanel();
 updatePoolNote();
+loadSurname();
 loadNames();
+{
+  const slot = $('surnameSlot');
+  if (slot) slot.textContent = SURNAME;
+  const input = $('surnameInput');
+  if (input) {
+    input.value = SURNAME;
+    input.addEventListener('input', () => {
+      // 輸入期間不打斷：只在看起來像一個完整漢字時才套用。
+      const v = input.value.trim();
+      if (surnameValid(v)) setSurname(v);
+    });
+    input.addEventListener('blur', () => {
+      setSurname(input.value.trim() || DEFAULT_SURNAME);
+    });
+  }
+}
 renderBook();
 
 if (new URLSearchParams(location.search).has('qa')) {
   window.wubaobaoQA = () => ({
     book,
     target,
+    surname: SURNAME,
     lines: lines.map((v) => (v == null ? null : v ? 1 : 0)),
     lineCount: lines.length,
     round,

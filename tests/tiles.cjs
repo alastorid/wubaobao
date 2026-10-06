@@ -4,8 +4,11 @@ const assert = require('node:assert/strict');
 
 const base = process.argv[2] || 'http://localhost:8123/';
 const OUT = process.env.QA_OUT || '/tmp/wubaobao-qa';
-const { BANNED } = require('../js/namepool.js');
-const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c));
+const { BANNED, TABOO_CODES } = require('../js/namepool.js');
+// 名字必須同時避開使用者指定的禁用字與取名忌字。
+// 只查 BANNED 會漏掉 TABOO，而 TABOO 才是擋「死」「物」「劫」那一類的。
+const findBannedLocal = (text) => [...String(text)]
+  .filter((c) => BANNED.has(c) || TABOO_CODES.has(c));
 
 (async () => {
   const engine = process.env.ENGINE === 'chromium' ? chromium : webkit;
@@ -207,15 +210,24 @@ const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c))
     assert(typeof text === 'string' && text.length > 0, `${label} 應寫入非空內容`);
   }
 
-  const stored = await p.evaluate(() =>
-    JSON.parse(localStorage.getItem('wubaobao-names') || '[]').map((n) => n.name),
+  const records = await p.evaluate(() =>
+    JSON.parse(localStorage.getItem('wubaobao-names') || '[]'),
   );
+  const stored = records.map((n) => n.name);
   // 只複製名字：每行一個，順序與名錄一致
   assert.deepEqual(clipNames.split('\n'), stored, '只複製名字應與名錄完全一致');
   // 含出處：每個名字都要出現，且帶得出處與寓意
   for (const n of stored) assert(clipDetail.includes(n), `含出處應包含 ${n}`);
   assert(clipDetail.includes('畫'), '含出處應有筆畫');
-  assert(clipDetail.includes('古本'), '含出處應標明古本出處');
+  // 出處必須是真的在複製內容裡，不是靠「古本」兩個字蒙混。
+  //
+  // 原本這裡只斷言 clipDetail 含有「古本」二字，等於只要畫面上隨便出現
+  // 「古本」就算過，無法證明出處有被複製進去。改成逐筆比對 cites。
+  for (const rec of records) {
+    for (const cite of rec.cites || []) {
+      assert(clipDetail.includes(cite), `含出處應含該筆的出處「${cite}」（${rec.name}）`);
+    }
+  }
   // 全部：序號與五行
   assert(clipAll.includes('五行：'), '全部格式應有五行');
   assert(/1\. 吳/.test(clipAll), '全部格式應有序號');
@@ -252,10 +264,40 @@ const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c))
   await p.reload();
   await p.waitForFunction(() => window.wubaobaoQA);
   assert.equal((await qa()).names, 0, '損壞資料應安全回復');
-  await p.evaluate(() => localStorage.setItem('wubaobao-names', JSON.stringify([{ name: '吳妤希' }])));
+  // 禁用字筆：name 與 chars 都完整，會通過結構檢查，
+  // 必須靠禁用字過濾擋下——否則這條測試只是被結構檢查擋掉而假通過。
+  await p.evaluate(() => localStorage.setItem('wubaobao-names', JSON.stringify([
+    { name: '吳妤希', chars: ['妤', '希'], wx: ['木', '木'], strokes: [6, 7], cites: ['a', 'b'], meanings: ['m', 'n'] },
+  ])));
   await p.reload();
   await p.waitForFunction(() => window.wubaobaoQA);
   assert.equal((await qa()).names, 0, '舊資料中的禁用名不得進入名錄');
+
+  // 忌字筆：字不在 BANNED 裡，但在 TABOO 裡（例如「物」）。
+  // 這一筆專門驗證「只擋禁用字」是不夠的。
+  await p.evaluate(() => localStorage.setItem('wubaobao-names', JSON.stringify([
+    { name: '吳若物', chars: ['若', '物'], wx: ['木', '木'], strokes: [8, 8], cites: ['a', 'b'], meanings: ['m', 'n'] },
+  ])));
+  await p.reload();
+  await p.waitForFunction(() => window.wubaobaoQA);
+  assert.equal((await qa()).names, 0, '舊資料中的取名忌字不得進入名錄');
+
+  // 夾帶筆：name 乾淨，但 chars 裡藏了忌字。只查 name 會漏掉。
+  await p.evaluate(() => localStorage.setItem('wubaobao-names', JSON.stringify([
+    { name: '吳若芷', chars: ['若', '妤'], wx: ['木', '木'], strokes: [8, 6], cites: ['a', 'b'], meanings: ['m', 'n'] },
+  ])));
+  await p.reload();
+  await p.waitForFunction(() => window.wubaobaoQA);
+  assert.equal((await qa()).names, 0, 'chars 裡夾帶的禁用字不得進入名錄');
+
+  // 舊格式（wx 為物件、strokes 為單值、cites 較短）必須被安全升級，不能讓頁面壞掉
+  await p.evaluate(() => localStorage.setItem('wubaobao-names', JSON.stringify([
+    { name: '吳若芷', chars: ['若', '芷'], wx: { 木: 2 }, strokes: '88', cites: ['a'], meanings: ['m', 'n'] },
+  ])));
+  await p.reload();
+  await p.waitForFunction(() => window.wubaobaoQA);
+  assert.deepEqual(errors, [], '舊格式名錄不得造成頁面錯誤');
+  assert.equal((await qa()).names, 1, '舊格式名錄應被安全升級後保留');
 
   // 音效與音樂：互動後才出聲、可獨立靜音並記住
   // （上一段是重載後的乾淨頁面，先擲一爻解鎖音訊）
@@ -359,13 +401,25 @@ const findBannedLocal = (text) => [...String(text)].filter((c) => BANNED.has(c))
   const allNames = dist.map((n) => n.name);
   for (const n of allNames) {
     assert(/^吳[一-鿿]{1,2}$/u.test(n), `名字格式不符：${n}`);
-    assert.equal(findBannedLocal(n).length, 0, `名字含禁用字：${n}`);
+    assert.equal(findBannedLocal(n).length, 0, `名字含禁用或忌字：${n}`);
   }
-  assert.equal(
-    new Set(allNames).size >= allNames.length * 0.9,
-    true,
-    `名字重複率過高：${allNames.length - new Set(allNames).size} 筆重複`,
-  );
+  // chars 也要查：只查 name 會讓夾帶在 chars 裡的忌字漏過
+  for (const rec of dist) {
+    for (const ch of rec.chars || []) {
+      assert.equal(findBannedLocal(ch).length, 0, `chars 含禁用或忌字：${ch}`);
+    }
+  }
+  // 重複率門檻：字庫清理忌字後只剩 147 字（可用 136），
+  // 組合空間遠小於清理前，所以門檻必須按實際空間重算，
+  // 否則這條斷言會變成「強迫抽籤變魔法」的假驗證。
+  //
+  // 實際計算：200 次抽名，單字名佔 15%（30 次）、兩字名佔 85%（170 次）。
+  //   單字木名 21 次 / 116 種 → 期望重複 1.8
+  //   單字火名  9 次 /  20 種 → 期望重複 1.9
+  //   兩字名  170 次 / 18360 種 → 期望重複 0.8
+  // 合計期望約 4.5 筆，容許 12 筆（2.6 倍）當上限。
+  const dupes = allNames.length - new Set(allNames).size;
+  assert(dupes <= 12, `名字重複率過高：${dupes} 筆重複（200 次抽名的期望約 4.5 筆）`);
 
   // 開著名錄時，揭曉卡不該蓋住名單
   for (let i = 0; i < 3; i++) await cast();

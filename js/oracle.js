@@ -150,17 +150,18 @@ export function resolveCasting(book, lines) {
     };
   }
 
+  // 神農本草：這裡是「藥名索引」，不是引文。
+  // 本站沒有《本草經》的原文，所以面板只呈現藥名與出處，
+  // 不列現代中藥學的歸經、性味、功用——那會讓人誤以為是古籍內容。
   const herb = pick(BENCAO);
   return {
     kind: 'bencao',
-    seal: herb.name[0],
-    title: herb.name,
-    wx: herb.wx,
+    seal: herb[0],
+    title: herb,
+    wx: '木',
     lines: [
-      { k: '出處', v: herb.src },
-      { k: '歸經', v: herb.wx2 },
-      { k: '性味', v: herb.taste },
-      { k: '功用', v: herb.use },
+      { k: '出處', v: `神農本草 · ${herb}` },
+      { k: '說明', v: '《神農本草經》收載之藥名。本站只列藥名索引，不引經文。' },
     ],
   };
 }
