@@ -441,6 +441,82 @@ const findBannedLocal = (text) => [...String(text)]
   await p.locator('#bookClose').click();
   await p.waitForFunction(() => document.getElementById('book').classList.contains('hidden'));
 
+  // ── 狀態訊息不得蓋住名錄按鈕 ──────────────────────────
+  //
+  // 這是實測出來的真缺陷：toast 原本是 position: fixed 貼在底部，
+  // 320×568 / 360×640 / 390×844 三種手機尺寸下都正好壓在「名錄」按鈕上——
+  // 剛複製完想再點開名錄，卻被自己剛跳出來的訊息擋住。
+  // 現在 toast 與 poolNote 共用同一列，必須確認兩件事：
+  //   1. toast 顯示時不會與名錄按鈕重疊
+  //   2. toast 顯示時不會把頁面推出視窗高度（那樣等於看不見）
+  const toastFits = await p.evaluate(() => {
+    const t = document.getElementById('toast');
+    const n = document.getElementById('poolNote');
+    const out = [];
+    // 用實際會出現的最長訊息測，避免只測短字串而漏掉會折行的情況
+    for (const msg of [
+      '已換到 古本神農本草 · 本草收載之藥名索引',
+      '已複製 87 個含出處到剪貼簿',
+      '已複製 3 個名字到剪貼簿',
+      '這個瀏覽器不允許自動複製，請手動選取',
+    ]) {
+      n.classList.add('hidden');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      const tb = t.getBoundingClientRect();
+      const bb = document.getElementById('bookToggle').getBoundingClientRect();
+      const overlap = !(bb.right <= tb.left || bb.left >= tb.right
+        || bb.bottom <= tb.top || bb.top >= tb.bottom);
+      out.push({
+        msg,
+        position: getComputedStyle(t).position,
+        overlap,
+        belowFold: tb.bottom > window.innerHeight + 1,
+      });
+    }
+    n.classList.remove('hidden');
+    t.classList.add('hidden');
+    return out;
+  });
+  for (const r of toastFits) {
+    assert(!r.overlap, `狀態訊息蓋住名錄按鈕：「${r.msg}」`);
+    assert(!r.belowFold, `狀態訊息被推出視窗，看不見：「${r.msg}」`);
+    assert(r.position !== 'fixed', `狀態訊息不該用 fixed 覆蓋版面（實得 ${r.position}）`);
+  }
+
+  // ── 在姓的輸入欄打字不該順便擲爻 ──────────────────────
+  //
+  // 鍵盤擲爻綁在 document 的 keydown 上。原本只排除 button，
+  // 加上可輸入的姓之後，輸入「陳」會同時擲一爻——使用者根本不知道自己做了什麼。
+  const beforeTyping = (await qa()).lineCount;
+  await p.locator('#surnameInput').fill('');
+  await p.locator('#surnameInput').type('陳', { delay: 40 });
+  const afterTyping = await qa();
+  assert.equal(afterTyping.lineCount, beforeTyping,
+    `在姓欄輸入一個字不該擲爻（${beforeTyping} → ${afterTyping.lineCount}）`);
+  assert.equal(afterTyping.surname, '陳', `姓應該被設成「陳」，實得「${afterTyping.surname}」`);
+
+  // 但焦點不在輸入欄時，鍵盤仍然要能擲爻（無障礙操作不能壞掉）。
+  // 注意不能直接拿 afterTyping.lineCount 當基準：點擊 body 本身也會擲一爻，
+  // 若刚好擲滿六爻就會成卦歸零，數字反而變小，量不出差異。
+  // 所以基準要在按鍵之前才取。
+  await p.locator('body').click({ position: { x: 5, y: 5 } });
+  const beforeKey = (await qa()).lineCount;
+  await p.keyboard.press('KeyA');
+  const afterKey = (await qa()).lineCount;
+  assert(afterKey === 1 || afterKey > beforeKey,
+    `焦點不在輸入欄時按鍵應擲爻（擲前 ${beforeKey} 爻，擲後 ${afterKey} 爻）`);
+
+  // 姓換成陳之後產生的名字，姓也要跟著換
+  const recNames = await p.evaluate(() =>
+    JSON.parse(localStorage.getItem('wubaobao-names') || '[]').map((n) => n.name));
+  for (const n of recNames) {
+    assert(/^(吳|陳)[一-鿿]{1,2}$/u.test(n), `換姓後名字的姓應一併更新：${n}`);
+  }
+  await p.evaluate(() => localStorage.removeItem('wubaobao-surname'));
+  await p.reload();
+  await p.waitForFunction(() => window.wubaobaoQA);
+
   // 頁面文案不得殘留禁用字。
   // 例外：以／樂／語／宥 只可能出現在「原典逐字引用」裡（大象傳的「君子以…」
   // 句式、需與豫的大象「宴樂」「作樂」、頤的大象「言語」、解的大象「宥罪」）。

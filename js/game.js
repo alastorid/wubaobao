@@ -1,4 +1,4 @@
-// 吳・古本取名：六爻成卦，依古本四部取名。喜用神只有木、火。
+// 八部古籍取名：六爻成卦後依所選古籍取字。喜用神只有木、火。
 //
 // 玩法不變的那條鐵律：任何觸碰（點或滑）都會擲爻、累積進度，
 // 擲滿六爻必定成卦、必定得一個名字，永遠不會卡住。
@@ -364,7 +364,9 @@ function renderBooks() {
         renderSlots();
         renderPanel();
         sound.play('rise', 0.5);
-        toast(`已換到 ${s.name} · ${s.blurb}`);
+        // 只報來源名，介紹放在面板上。整段 blurb 塞進 toast 會折成五行，
+      // 在 320px 寬度上把左欄撐得很難看。
+      toast(`已換到 ${s.name}`);
       };
       return b;
     }),
@@ -379,7 +381,10 @@ function renderBooks() {
 const CN_NUM = '零一二三四五六七八九十';
 function renderSourceTitles() {
   const count = SOURCES.length;
-  $('booksTitle').textContent = `古本${CN_NUM[count] || count}部`;
+  // 不寫「古本八部」：這八部的性質並不相同（經文／名稱索引／現代描述），
+  // 一律冠「古本」會讓使用者以為全部都是可逐字引用的古籍原文。
+  // 逐部的層級由 bookBlurb 說明。
+  $('booksTitle').textContent = `${CN_NUM[count] || count}部古籍`;
   $('brandSub').textContent = SOURCES.map((s) =>
     s.name.replace('古本', '').replace('神農本草', '本草'),
   ).join(' · ');
@@ -593,11 +598,18 @@ function renderBook() {
 }
 
 // ── 提示 ────────────────────────────────────────────────
+// 狀態訊息與 poolNote 共用同一列：顯示時隱藏 poolNote，消失後還原。
+// poolNote 是常駐的字庫統計（120 個古籍取名用字 · 木 98 字…），
+// toast 是短暫的操作結果，兩者不會同時有訊息要看。
 function toast(text) {
   $('toast').textContent = text;
   $('toast').classList.remove('hidden');
+  $('poolNote').classList.add('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => $('toast').classList.add('hidden'), 3400);
+  toastTimer = setTimeout(() => {
+    $('toast').classList.add('hidden');
+    $('poolNote').classList.remove('hidden');
+  }, 3400);
 }
 
 // ── 事件 ────────────────────────────────────────────────
@@ -663,7 +675,13 @@ for (const event of ['pointerup', 'pointercancel'])
   document.addEventListener(event, () => (pointer = null));
 document.addEventListener('keydown', (e) => {
   if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || ['Tab', 'Escape'].includes(e.key)) return;
-  if (e.target.closest('button')) return;
+  // 有焦點在輸入欄位時，按鍵是輸入，不是擲爻。
+  // 少了這一段，輸入孩子的姓會順便擲出爻來。
+  const el = e.target;
+  if (el && (el.isContentEditable
+    || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
+  // 有焦點在按鈕上時，按鍵是操作按鈕（Enter／空白），不是擲爻。
+  if (el && el.closest('button')) return;
   sound.unlock();
   cast();
 });
@@ -672,7 +690,7 @@ document.addEventListener('keydown', (e) => {
 function updatePoolNote() {
   const s = sourceStats();
   $('poolNote').textContent =
-    `${CHARACTERS.length} 個古本取名用字 · 木 ${s.木.total} 字（火 ${s.火.total} 字） · 七三之序取名`;
+    `${CHARACTERS.length} 個古籍取名用字 · 木 ${s.木.total} 字（火 ${s.火.total} 字） · 七三之序取名`;
 }
 renderBooks();
 renderSourceTitles();

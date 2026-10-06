@@ -462,6 +462,14 @@ body {
   font-size: 10.5px;
   color: var(--ink-faint);
   line-height: 1.5;
+  /* 恆定保留兩行高。狀態訊息會取代這一段（見 game.js 的 toast()），
+     訊息比統計長時會折成兩行；不預留的話顯示訊息會把版面往下推，
+     整頁因而溢出視窗——實測 320×568 會被推到 y=605，超過 568。 */
+  min-height: calc(2em + 0.5em);
+}
+
+.pool-note.hidden {
+  display: none;
 }
 
 /* ── 卦檯 ───────────────────────────────────────────── */
@@ -749,24 +757,15 @@ body {
 }
 
 /* ── 提示 ───────────────────────────────────────────── */
+/* 狀態訊息不覆蓋畫面。
+   原本是 position: fixed 貼在底部，但實測 320×568 / 360×640 / 390×844
+   三種手機尺寸下都正好壓住「名錄」按鈕——剛複製完想再點開名錄，
+   卻被自己剛跳出來的訊息擋住。
+   改成和 poolNote 同一列的靜態文字：兩者都是單行狀態訊息，
+   顯示時互相取代，版面不位移，也不擋任何東西。 */
 #toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  z-index: 50;
-  transform: translateX(-50%);
-  max-width: min(90vw, 520px);
-  padding: 9px 16px;
-  border-radius: 8px;
-  background: rgba(36, 31, 26, 0.93);
-  color: #f4ecd9;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  text-align: center;
-}
-
-#toast.hidden {
-  display: none;
+  color: var(--cinnabar);
+  font-weight: 700;
 }
 
 /* ── 名錄 ───────────────────────────────────────────── */

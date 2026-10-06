@@ -1,4 +1,4 @@
-// 資料層測試：古本八部、字庫五行與禁用字、七三取名比例。
+// 資料層測試：八部古籍、字庫五行、禁用字與忌字、七三取名比例。
 const assert = require('node:assert/strict');
 const {
   CHARACTERS, CHAR_BY_CODE, WU_XING, ELEMENTS, RATIO,
@@ -8,7 +8,7 @@ const {
 // 古本經文由 tests/namepool.cjs 以動態 import 載入後放在 global.__CLASSICS
 const {
   HEXAGRAMS, HEXAGRAM_BY_LINES, ZIWEI_STARS, ZIWEI_PALACES, SHANHAI, BENCAO,
-  DAODEJING, BAOPUZI, SHIJING, CHUCI, SOURCES,
+  DAODEJING, BAOPUZI, SHIJING, CHUCI, SOURCES, SOURCE_BY_ID, DROPPED_NO_SOURCE,
 } = global.__CLASSICS;
 
 // 古本清單由 SOURCES 推導，日後增刪古本不必再改測試
@@ -210,6 +210,22 @@ for (const b of BOOKS) {
   assert(total > 0);
   const inBook = stats['木'].books[b] + stats['火'].books[b];
   assert(inBook >= 2, `${b} 可用字過少：${inBook}`);
+}
+// 每部來源都必須宣告資料層級，介面才能據此說明引用強度。
+// 沒有 tier 的來源會讓「這能不能當引文」變成無從判斷。
+for (const s of SOURCES) {
+  assert(['text', 'index', 'modern'].includes(s.tier),
+    `${s.name} 未宣告資料層級 tier（應為 text / index / modern）`);
+  assert(s.era && s.era.length <= 4, `${s.name} 年代欄異常：${s.era}`);
+}
+// 紫微斗數不是唐代古本。這個欄位寫錯的話，介面上就會公然說謊。
+assert.equal(SOURCE_BY_ID['ziwei'].era, '宋明', '紫微斗數的年代應為宋明，不是唐');
+// 只有 text 層能當逐字引文。
+assert.equal(SOURCE_BY_ID['ziwei'].tier, 'modern', '紫微斗數是現代描述，不能當引文');
+assert.equal(SOURCE_BY_ID['bencao'].tier, 'index', '本草只有藥名索引，沒有原文');
+assert.equal(SOURCE_BY_ID['shanhai'].tier, 'index', '山海經只有篇目索引，沒有原文');
+for (const id of ['yijing', 'shijing', 'chuji', 'daodejing', 'baopuzi']) {
+  assert.equal(SOURCE_BY_ID[id].tier, 'text', `${id} 有經文，tier 應為 text`);
 }
 assert.equal(new Set(SOURCES.map((s) => s.id)).size, SOURCES.length, '古本 id 不得重複');
 assert.equal(new Set(SOURCES.map((s) => s.seal)).size, SOURCES.length, '古本印文不得重複');

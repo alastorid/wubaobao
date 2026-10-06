@@ -1,4 +1,4 @@
-// 古本八部 · 經文資料庫
+// 八部古籍 · 資料庫
 //
 // 網站所有取名用字與經文說明都出自這八部古籍：
 //   古本易經      —— 六十四卦卦名、卦辭、大象傳（爻辭與彖傳未收）
@@ -303,15 +303,6 @@ export const BENCAO = Object.freeze([
 ]);
 
 // 經方常用藥名（只取字，不涉療效建議）
-// 藥名索引：只列《神農本草經》收載的「藥名」，不含功效敘述。
-//
-// 為什麼只有藥名：引用「神農本草·白芷」指的是《本草經》的白芷條目，
-// 不是引用某句經文。本站沒有《本草經》的原文文本在手，因此不列任何「經文」，
-// 也不列現代中藥學的功能主治——那會變成把教科書內容冒充古籍。
-//
-// 這份清單只回答一個問題：某個字是否確為本草所收的藥。
-// 分品、歸經、功效都不列，因為無法逐字查證。
-export const BENCAO_NAMES = Object.freeze([...new Set(BENCAO)]);
 
 // ── 出處無憑的 19 字：明確記錄為退出字庫 ──────────────────
 //
@@ -344,18 +335,6 @@ export const DROPPED_NO_SOURCE = Object.freeze([
   { c: '喜', why: 'cite 紫微「喜神」，note 是現代命理描述而非經文' },
 ]);
 
-export const BENCAO_CHAR_HINT = Object.freeze({
-  茯苓: ['茯', '苓'],
-  白芷: ['芷'],
-  黃芪: ['芪'],
-  人參: ['參'],
-  當歸: ['歸'],
-  甘草: ['甘'],
-  蓮子: ['蓮'],
-  薏苡: ['薏', '苡'],
-  茵陳: ['茵'],
-  木香: ['香'],
-});
 
 // ── 道德經 ──────────────────────────────────────────────
 // 老子道德經共八十一章，這裡收錄適合取名的一章名句。
@@ -464,69 +443,84 @@ export const CHUCI = Object.freeze([
 ]);
 
 export const SOURCES = Object.freeze([
+  // name   介面上顯示的名稱
+  // era    成書年代（紫微斗數是宋明，不是唐）
+  // tier   資料層級，決定引用怎麼寫：
+  //        text = 經文，可逐字查證，引用時給書名篇名與原句
+  //        index = 名稱索引，手上沒有原文，只能說「某書的某條」，不能當引文
+  //        modern = 現代描述，只能當註記，不能當引文
+  // blurb  介面上的介紹，說明這個來源到底提供什麼
   {
     id: 'yijing',
     name: '古本易經',
     seal: '易',
     era: '周',
+    tier: 'text',
     wx: '木',
-    blurb: '六十四卦，陰陽消息。取字於卦名、卦辭、彖傳、大象傳。',
+    blurb: '六十四卦卦辭與大象傳。本站只收這兩種文本，爻辭與彖傳未收，取字限於此。',
   },
   {
     id: 'ziwei',
     name: '古本紫微斗數',
     seal: '斗',
-    era: '唐',
+    era: '宋明',
+    tier: 'modern',
     wx: '火',
-    blurb: '十四主星分南北斗，十二宮定人倫。取字於星曜、宮位、四化。',
+    blurb: '星名與宮名的索引，非經文。年代為宋明，不是唐代古本。',
   },
   {
     id: 'shanhai',
     name: '古本山海經',
     seal: '山',
     era: '戰國',
+    tier: 'index',
     wx: '木',
-    blurb: '山川草木、靈鳥異獸、國族遠方。取字於山海草木與祥禽。',
+    blurb: '篇目與異獸名的索引，非經文。引用指的是《山海經》的某條，不是某句原文。',
   },
   {
     id: 'bencao',
     name: '古本神農本草',
     seal: '草',
     era: '漢',
+    tier: 'index',
     wx: '木',
-    blurb: '經方本草，草木百果。取字於藥材名，取其養生意象。',
+    blurb: '《本草經》的藥名索引，非經文。引用指的是「白芷條」這樣的條目，不是某句經文。',
   },
   {
     id: 'daodejing',
     name: '古本道德經',
     seal: '道',
     era: '春秋',
+    tier: 'text',
     wx: '火',
-    blurb: '老子八十一章，道法自然。取字於章句中的樸、儉、慈、赤子。',
+    blurb: '老子八十一章，本站收 29 章適合取名的句子。',
   },
   {
     id: 'baopuzi',
     name: '古本抱樸子',
     seal: '樸',
     era: '晉',
+    tier: 'text',
     wx: '木',
-    blurb: '葛洪內篇，金丹養生兼修德行。取字於煉、壽、誠、忠。',
+    blurb: '葛洪內篇養生與德行相關的句子。本書偏金丹方技，可用的木火字彙本來就少。',
   },
   {
     id: 'shijing',
     name: '古本詩經',
     seal: '詩',
     era: '西周',
+    tier: 'text',
     wx: '木',
-    blurb: '風雅頌三體。取字於采葛采薇、灼灼其華、巧笑倩兮 —— 最偏詩意的一部。',
+    blurb: '風雅頌，本站收 21 篇。取字於灼灼其華、靜女其姝、蒹葭蒼蒼 —— 最偏詩意的一部。',
   },
   {
     id: 'chuji',
     name: '古本楚辭',
     seal: '騷',
     era: '戰國',
+    tier: 'text',
     wx: '木',
-    blurb: '離騷九歌，香草美人。取字於滋蘭九畹、扈江離與辟芷 —— 最貼合女名的一部。',
+    blurb: '離騷九歌九章，本站收 13 篇。取字於滋蘭九畹、秋蘭兮青青 —— 最貼合女名的一部。',
   },
 ]);
 
@@ -538,7 +532,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     TRIGRAMS, HEXAGRAMS, HEXAGRAM_BY_LINES,
     ZIWEI_STARS, ZIWEI_PALACES, ZIWEI_HUA, ZIWEI_SHEN, ZIWEI_AUX,
-    SHANHAI, SHANHAI_SECTIONS, BENCAO, BENCAO_CHAR_HINT,
+    SHANHAI, SHANHAI_SECTIONS, BENCAO,
     DAODEJING, BAOPUZI, SHIJING, CHUCI, SOURCES, SOURCE_BY_ID,
   };
 }
