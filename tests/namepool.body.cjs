@@ -128,7 +128,8 @@ for (const e of CHARACTERS) {
 }
 
 // ── 取名忌字：字庫裡一個都不該有 ────────────────────────
-assert(Object.keys(TABOO).length >= 40, '忌字表過小');
+// 不寫死數量：新增或刪除忌字是正常的，但要確保沒被清空。
+assert(Object.keys(TABOO).length >= 80, `忌字表過小：${Object.keys(TABOO).length}`);
 for (const [c, why] of Object.entries(TABOO)) {
   assert(typeof why === 'string' && why.length >= 2, `忌字 ${c} 未說明理由`);
   assert(!CHAR_BY_CODE.has(c), `字庫仍含忌字 ${c}（${why}）`);
