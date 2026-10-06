@@ -165,7 +165,3 @@ export function resolveCasting(book, lines) {
     ],
   };
 }
-
-// 測試與介面用的無隨機查詢
-export const lookupHexagram = (bits) => HEXAGRAM_BY_LINES.get(bits);
-export const ALL_HEXAGRAMS = HEXAGRAMS;

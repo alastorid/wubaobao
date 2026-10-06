@@ -11,6 +11,7 @@
 //   - 拼音完全相同（含聲調）即棄
 //   - 名字唯一
 
+const assert = require('node:assert/strict');
 const path = require('node:path');
 const { CHARACTERS, BANNED, RATIO } = require(path.join(__dirname, '..', 'js', 'namepool.js'));
 const loadClassics = require(path.join(__dirname, '..', 'tests', 'classics.cjs'));
@@ -290,9 +291,11 @@ loadClassics().then((C) => {
   const intro3 = (given) => {
     const a = [...given][0], b = [...given][1];
     const ea = pool.get(a), eb = pool.get(b);
-    const wxTxt = ea.w === eb.w
-      ? `兩個字都是${ea.w}，木氣足，補原局的木`
-      : `${ea.w}加${eb.w}，${ea.w === '木' ? '以木為主、火為輔' : '以火為主、木為輔'}`;
+    // 兩個字同行時，措辭必須跟著行走。原來不管哪一行都寫「木氣足」，
+    // 於是火火名會說出「兩個字都是火，木氣足，補原局的木」——自相矛盾。
+    const wxTxt = ea.w === '木'
+      ? '兩個字都是木，木氣足，補原局的木'
+      : '兩個字都是火，火氣足，溫暖而不燥，助木生長';
     return `我叫${SURNAME}${given}，三個字，姓${SURNAME}，名${given}兩個字。`
       + `${a}是${ea.meaning}，${b}是${eb.meaning}，${wxTxt}。`
       + `名字出自《${ea.cite}》與《${eb.cite}》。`;
@@ -419,6 +422,34 @@ loadClassics().then((C) => {
     console.log('  2. 放寬「同句」限制到「同段」或「同書任一句」——會犧牲引用強度');
     console.log('  3. 放寬五行限制，引入非木火字——會改變命理前提');
   }
+  // 自我介紹的措辭必須和實際五行一致。
+  // 曾經出現過「兩個字都是火，木氣足，補原局的木」這種自相矛盾的句子
+  // ——同行時不分木火，一律寫「木氣足」。這裡逐句比對，錯了就擋。
+  //
+  // emit3 的元素是 { given, tier, a, b }；emit2 的元素是字元物件本身。
+  // 兩者形狀不同，所以各自走對應的自我介紹產生器。
+  const intros = [
+    ...emit3.map((r) => ({ full: SURNAME + r.given, given: r.given, intro: intro3(r.given) })),
+    // singles 的元素是 { e, s }，字在 e.c
+    ...emit2.map((r) => ({ full: SURNAME + r.e.c, given: r.e.c, intro: intro2(r.e.c) })),
+  ];
+  for (const { full, given, intro } of intros) {
+    const wxs = [...given].map((c) => pool.get(c)?.w);
+    assert(wxs.every(Boolean), `${full} 有字查不到五行`);
+    const same = wxs[0] === wxs[1];
+    if (same) {
+      assert(intro.includes(`兩個字都是${wxs[0]}`),
+        `${full} 的自我介紹沒有說「兩個字都是${wxs[0]}」：${intro}`);
+      // 同行時不能提另一行。火火名說「木氣足」就是錯的。
+      const other = wxs[0] === '木' ? '火氣足' : '木氣足';
+      assert(!intro.includes(other),
+        `${full} 是${wxs[0]}${wxs[0]}，自我介紹卻提到${other}：${intro}`);
+    }
+    // 字數宣稱必須和實際字數一致
+    const want = given.length === 2 ? '三個字' : '兩個字';
+    assert(intro.includes(`，${want}，`), `${full} 的自我介紹沒有說明是${want}：${intro}`);
+  }
+
   if (emit2.length < 100) {
     console.log(
       `\n注意：兩字名只有 ${emit2.length} 個，未達 100。`,
